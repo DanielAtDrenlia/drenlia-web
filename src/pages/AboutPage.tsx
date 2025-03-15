@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import CallToAction from '../components/CallToAction';
 import InitialsAvatar from '../components/InitialsAvatar';
+import type { TeamMember } from '../services/apiService';
+import { getAboutSections, getTeamMembers, AboutSection as AboutSectionType } from '../services/apiService';
 
 const AboutContainer = styled.div`
   max-width: 1200px;
@@ -249,9 +251,50 @@ const TeamMember = styled.div<{ isVisible: boolean; index: number }>`
   opacity: 0;
   
   ${({ isVisible, index }) => isVisible && css`
-    animation: ${popIn} 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    animation-delay: ${0.2 * index}s;
+    animation: ${popIn} 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation-delay: ${0.1 * index}s;
   `}
+  
+  .team-member-image {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+  
+  h4 {
+    font-size: 1rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+  }
+  
+  p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 300px;
+    margin: 0 auto;
+  }
 `;
 
 const pulse = keyframes`
@@ -308,206 +351,196 @@ const TeamMemberBio = styled.p`
 `;
 
 const AboutPage: React.FC = () => {
-  const [headerVisible, setHeaderVisible] = useState(false);
-  const [sectionsVisible, setSectionsVisible] = useState<boolean[]>([false, false, false]);
-  const [teamVisible, setTeamVisible] = useState(false);
-  
-  const headerRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = [useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null)];
-  const teamRef = useRef<HTMLElement>(null);
-  
-  // Generate random positions for each section
-  const sectionPositions = [
-    getRandomPosition(0),
-    getRandomPosition(1),
-    getRandomPosition(2)
-  ];
-  
+  const [sections, setSections] = useState<AboutSectionType[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [visibleSections, setVisibleSections] = useState<{ [key: string]: boolean }>({});
+  const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [sectionsData, teamData] = await Promise.all([
+          getAboutSections(),
+          getTeamMembers()
+        ]);
+        
+        // Sort sections by display_order
+        const sortedSections = [...sectionsData].sort((a, b) => a.display_order - b.display_order);
+        setSections(sortedSections);
+        
+        // Sort team members by display_order
+        const sortedTeamMembers = [...teamData].sort((a, b) => a.display_order - b.display_order);
+        setTeamMembers(sortedTeamMembers);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load content. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Setup intersection observer
   useEffect(() => {
     const observerOptions = {
       root: null,
       rootMargin: '0px',
       threshold: 0.2,
     };
-    
-    // Create observers for each section
-    const headerObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setHeaderVisible(true);
-        headerObserver.disconnect();
-      }
-    }, observerOptions);
-    
-    const sectionObservers = sectionRefs.map((_, index) => {
-      return new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) {
-          setSectionsVisible(prev => {
-            const newState = [...prev];
-            newState[index] = true;
-            return newState;
-          });
-          sectionObservers[index].disconnect();
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.target.id) {
+          setVisibleSections(prev => ({
+            ...prev,
+            [entry.target.id]: true
+          }));
         }
-      }, observerOptions);
-    });
-    
-    const teamObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setTeamVisible(true);
-        teamObserver.disconnect();
-      }
-    }, observerOptions);
-    
-    // Observe elements
-    if (headerRef.current) {
-      headerObserver.observe(headerRef.current);
-    }
-    
-    sectionRefs.forEach((ref, index) => {
-      if (ref.current) {
-        sectionObservers[index].observe(ref.current);
-      }
-    });
-    
-    if (teamRef.current) {
-      teamObserver.observe(teamRef.current);
-    }
-    
-    // Cleanup
-    return () => {
-      headerObserver.disconnect();
-      sectionObservers.forEach(observer => observer.disconnect());
-      teamObserver.disconnect();
+      });
     };
-  }, []);
-  
-  const teamMembers = [
-    {
-      name: 'Daniel Desrosiers',
-      role: 'CEO & Founder',
-      bio: 'With over 25 years of experience, Daniel has cumulated extensive knowledge in cloud services, datacenter management and operations. Since a very young age and until today, he is a technology enthusiast.',
-      image: '/images/team/daniel.jpg'
-    },
-    {
-      name: 'Tristan Desrosiers',
-      role: 'Lead Developer',
-      bio: 'Tristan is a full-stack developer with a passion for creating elegant, efficient code and solving complex problems.',
-      image: '/images/team/tristan.png'
-    },
-    {
-      name: 'Andrew Gullotti',
-      role: 'Product Owner',
-      bio: 'Andrew is always thinking of new ideas and looking for ways to enhance the user experience. He currently plays the role of product owner at Drenlia.',
-      image: ''
-    },
-    {
-      name: 'Amanda Beauregard',
-      role: 'Digital Art Consultant',
-      bio: 'Amanda has a passion for creating beautiful and functional digital art. Currently, she is a student at Dawson College in the Illustration program.',
-      image: '/images/team/amanda.png'
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe header
+    if (sectionRefs.current['header']) {
+      observer.observe(sectionRefs.current['header']);
     }
-  ];
-  
-  return (
-    <>
+
+    // Observe about sections
+    sections.forEach(section => {
+      const ref = sectionRefs.current[`section-${section.about_id}`];
+      if (ref) {
+        ref.id = `section-${section.about_id}`;
+        observer.observe(ref);
+      }
+    });
+
+    // Observe team section
+    if (sectionRefs.current['team']) {
+      sectionRefs.current['team'].id = 'team';
+      observer.observe(sectionRefs.current['team']);
+    }
+
+    return () => observer.disconnect();
+  }, [sections]);
+
+  if (loading) {
+    return (
       <AboutContainer>
-        <AboutHeader ref={headerRef}>
-          <AboutTitle isVisible={headerVisible}>About Drenlia</AboutTitle>
-          <AboutSubtitle isVisible={headerVisible}>
-            We are a team of passionate technologists dedicated to creating innovative digital solutions 
-            that help businesses thrive in the modern world.
-          </AboutSubtitle>
-        </AboutHeader>
-        
-        <AboutSection 
-          ref={sectionRefs[0]}
-          isVisible={sectionsVisible[0]} 
-          index={0}
-          x={sectionPositions[0].x}
-          y={sectionPositions[0].y}
-          rotate={sectionPositions[0].rotate}
-        >
-          <SectionTitle isVisible={sectionsVisible[0]}>Our Story</SectionTitle>
-          <SectionContent>
-            <SectionText isVisible={sectionsVisible[0]}>
-              <p>
-                Founded in 2015, Drenlia began with a simple mission: to improve technology and services for businesses of all sizes.
-              </p>
-              <p>
-                Over the years, we've grown, evolved and transformed into a team of passionate technologists dedicated to creating innovative digital solutions.
-              </p>
-              <p>
-                Today, we continue to push the boundaries of what's possible, staying at the forefront of 
-                technological innovation while remaining committed to our core values of excellence, 
-                integrity, and client satisfaction.
-              </p>
-            </SectionText>
-            <SectionImage isVisible={sectionsVisible[0]}>
-              <img src="/images/about/office.jpg" alt="Drenlia office" />
-            </SectionImage>
-          </SectionContent>
-        </AboutSection>
-        
-        <AboutSection 
-          ref={sectionRefs[1]}
-          isVisible={sectionsVisible[1]} 
-          index={1}
-          x={sectionPositions[1].x}
-          y={sectionPositions[1].y}
-          rotate={sectionPositions[1].rotate}
-        >
-          <SectionTitle isVisible={sectionsVisible[1]}>Our Mission</SectionTitle>
-          <SectionContent>
-            <SectionImage isVisible={sectionsVisible[1]}>
-              <img src="/images/about/collab.jpg" alt="Team collaboration" />
-            </SectionImage>
-            <SectionText isVisible={sectionsVisible[1]}>
-              <p>
-                At Drenlia, our mission is to empower businesses through technology. We believe that the right 
-                digital solutions can transform organizations, enabling them to achieve their goals and make a 
-                positive impact in the world.
-              </p>
-              <p>
-                We are committed to delivering exceptional value to our clients by combining technical excellence 
-                with strategic thinking. Our solutions are not just technically sound but also aligned with business objectives.
-              </p>
-              <p>
-                We strive to build long-term partnerships with, serving as trusted advisors who help 
-                people and businesses navigate the ever-changing technological landscape and seize new opportunities for growth.
-              </p>
-            </SectionText>
-          </SectionContent>
-        </AboutSection>
-        
-        <TeamSection ref={teamRef} isVisible={teamVisible}>
-          <SectionTitle isVisible={teamVisible}>Our Team</SectionTitle>
-          <SectionText isVisible={teamVisible} delay={0.2}>
-            <p>
-              Our success is driven by our talented team of professionals who bring diverse skills, 
-              perspectives, and experiences to every project.
-            </p>
-          </SectionText>
-          <TeamGrid>
-            {teamMembers.map((member, index) => (
-              <TeamMember key={index} isVisible={teamVisible} index={index}>
-                <TeamMemberImage isVisible={teamVisible}>
-                  {member.image ? (
-                    <img src={member.image} alt={member.name} />
-                  ) : (
-                    <InitialsAvatar name={member.name} />
-                  )}
-                </TeamMemberImage>
-                <TeamMemberName>{member.name}</TeamMemberName>
-                <TeamMemberRole>{member.role}</TeamMemberRole>
-                <TeamMemberBio>{member.bio}</TeamMemberBio>
-              </TeamMember>
-            ))}
-          </TeamGrid>
-        </TeamSection>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
       </AboutContainer>
-      
+    );
+  }
+
+  if (error) {
+    return (
+      <AboutContainer>
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      </AboutContainer>
+    );
+  }
+
+  return (
+    <AboutContainer>
+      <AboutHeader 
+        ref={(el: HTMLDivElement | null) => {
+          sectionRefs.current['header'] = el;
+          if (el) el.id = 'header';
+        }}
+      >
+        <AboutTitle isVisible={visibleSections.header}>About Us</AboutTitle>
+        <AboutSubtitle isVisible={visibleSections.header}>
+          Learn about our mission, our values, and the team that makes it all possible.
+        </AboutSubtitle>
+      </AboutHeader>
+
+      {/* About Sections */}
+      {sections.map((section, index) => {
+        const position = getRandomPosition(index);
+        return (
+          <AboutSection
+            key={section.about_id}
+            ref={(el: HTMLDivElement | null) => {
+              sectionRefs.current[`section-${section.about_id}`] = el;
+              if (el) el.id = `section-${section.about_id}`;
+            }}
+            isVisible={visibleSections[`section-${section.about_id}`]}
+            index={index}
+            x={position.x}
+            y={position.y}
+            rotate={position.rotate}
+          >
+            <SectionTitle isVisible={visibleSections[`section-${section.about_id}`]}>
+              {section.title}
+            </SectionTitle>
+            <SectionContent>
+              <SectionText isVisible={visibleSections[`section-${section.about_id}`]}>
+                <p>{section.description}</p>
+              </SectionText>
+              {section.image_url && (
+                <SectionImage isVisible={visibleSections[`section-${section.about_id}`]}>
+                  <img src={section.image_url} alt={section.title} />
+                </SectionImage>
+              )}
+            </SectionContent>
+          </AboutSection>
+        );
+      })}
+
+      {/* Team Section */}
+      <TeamSection
+        ref={(el: HTMLDivElement | null) => {
+          sectionRefs.current['team'] = el;
+          if (el) el.id = 'team';
+        }}
+        isVisible={visibleSections.team}
+      >
+        <SectionTitle isVisible={visibleSections.team}>Our Team</SectionTitle>
+        <TeamGrid>
+          {teamMembers.map((member, index) => (
+            <TeamMember
+              key={member.team_id}
+              isVisible={visibleSections.team}
+              index={index}
+            >
+              {member.image_url ? (
+                <div className="team-member-image">
+                  <img
+                    src={member.image_url}
+                    alt={member.name}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2020.993V24H0v-2.996A14.977%2014.977%200%200112.004%2015c4.904%200%209.26%202.354%2011.996%205.993zM16.002%208.999a4%204%200%2011-8%200%204%204%200%20018%200z%22%20%2F%3E%3C%2Fsvg%3E';
+                    }}
+                  />
+                </div>
+              ) : (
+                <InitialsAvatar name={member.name} size={120} />
+              )}
+              <h3>{member.name}</h3>
+              <h4>{member.title}</h4>
+              {member.bio && <p>{member.bio}</p>}
+            </TeamMember>
+          ))}
+        </TeamGrid>
+      </TeamSection>
+
       <CallToAction />
-    </>
+    </AboutContainer>
   );
 };
 

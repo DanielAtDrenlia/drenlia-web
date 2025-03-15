@@ -64,6 +64,7 @@ const NavLinks = styled.div<{ isOpen: boolean }>`
     transition: all 0.3s ease;
     z-index: 99;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    align-items: center;
   }
 `;
 
@@ -96,6 +97,9 @@ const NavLink = styled(Link)`
     margin: 1rem 0;
     text-align: center;
     margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 `;
 
@@ -134,6 +138,9 @@ const NavLinkButton = styled.button`
     margin: 1rem 0;
     text-align: center;
     margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 `;
 

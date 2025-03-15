@@ -65,7 +65,8 @@ const HeroButtons = styled.div`
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 0.5rem;
-    width: fit-content;
+    width: 100%;
+    align-items: center;
   }
 `;
 
@@ -87,6 +88,11 @@ const ButtonBase = styled.button`
     background-color: #c0392b;
     color: var(--light-text-color);
   }
+  
+  @media (max-width: 768px) {
+    width: 80%;
+    text-align: center;
+  }
 `;
 
 const ServicesButton = styled(ButtonBase)``;
@@ -105,6 +111,11 @@ const PrimaryButton = styled(Link)`
     background-color: #c0392b;
     color: var(--light-text-color);
   }
+  
+  @media (max-width: 768px) {
+    width: 80%;
+    text-align: center;
+  }
 `;
 
 const SecondaryButton = styled(Link)`
@@ -120,6 +131,11 @@ const SecondaryButton = styled(Link)`
   &:hover {
     background-color: var(--light-text-color);
     color: var(--primary-color);
+  }
+  
+  @media (max-width: 768px) {
+    width: 80%;
+    text-align: center;
   }
 `;
 
