@@ -10,9 +10,10 @@ interface EmailResponse {
   message: string;
 }
 
-const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://yourdomain.com/api' // Replace with your production API URL
-  : 'http://localhost:3001/api';
+const API_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production'
+    ? '/api' // Default to relative path in production
+    : 'http://localhost:3001/api'); // Fallback for development
 
 /**
  * Send an email through the backend API

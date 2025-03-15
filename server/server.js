@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com' // Replace with your production domain
+    ? 'https://drenlia.com' // Updated to the actual domain
     : 'http://localhost:3000',
   credentials: true
 }));
