@@ -107,7 +107,15 @@ const ServiceStatus = styled.div<{ available: boolean }>`
   }
 `;
 
-const ContactForm: React.FC = () => {
+interface ContactFormProps {
+  captchaValid?: boolean;
+  onCaptchaError?: () => void;
+}
+
+const ContactForm: React.FC<ContactFormProps> = ({ 
+  captchaValid = true,
+  onCaptchaError = () => {}
+}) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -148,6 +156,14 @@ const ContactForm: React.FC = () => {
       return;
     }
     
+    if (!captchaValid) {
+      setFormMessage({
+        text: 'Please complete the captcha verification.',
+        type: 'error'
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     setFormMessage(null);
     
@@ -167,15 +183,24 @@ const ContactForm: React.FC = () => {
           subject: '',
           message: ''
         });
+        
+        // Reset captcha if there's an error handler
+        if (onCaptchaError) {
+          onCaptchaError();
+        }
       } else {
+        if (result.captchaError && onCaptchaError) {
+          onCaptchaError();
+        }
+        
         setFormMessage({
-          text: `Failed to send message: ${result.message || 'Unknown error'}`,
+          text: result.message || 'Failed to send message. Please try again.',
           type: 'error'
         });
       }
     } catch (error) {
       setFormMessage({
-        text: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        text: 'An error occurred. Please try again later.',
         type: 'error'
       });
     } finally {
@@ -240,7 +265,7 @@ const ContactForm: React.FC = () => {
         
         <SubmitButton 
           type="submit" 
-          disabled={isSubmitting || serviceAvailable === false}
+          disabled={isSubmitting || serviceAvailable === false || !captchaValid}
         >
           {isSubmitting ? 'Sending...' : 'Send Message'}
         </SubmitButton>

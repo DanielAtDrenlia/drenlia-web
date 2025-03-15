@@ -8,9 +8,10 @@ interface EmailData {
 interface EmailResponse {
   success: boolean;
   message: string;
+  captchaError?: boolean;
 }
 
-const API_URL = process.env.REACT_APP_API_URL || 
+export const API_URL = process.env.REACT_APP_API_URL || 
   (process.env.NODE_ENV === 'production'
     ? '/api' // Default to relative path in production
     : 'http://localhost:3001/api'); // Fallback for development
@@ -32,6 +33,15 @@ export const sendEmail = async (data: EmailData): Promise<EmailResponse> => {
     const result = await response.json();
     
     if (!response.ok) {
+      // Check if this is a captcha verification error (403 status)
+      if (response.status === 403) {
+        return {
+          success: false,
+          message: result.message || 'Captcha verification required',
+          captchaError: true
+        };
+      }
+      
       throw new Error(result.message || 'Failed to send email');
     }
     

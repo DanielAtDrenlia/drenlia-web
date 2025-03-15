@@ -63,8 +63,7 @@ const CallToAction: React.FC = () => {
       <CTAContent>
         <CTATitle>Ready to Transform Your Digital Presence?</CTATitle>
         <CTADescription>
-          Let's work together to create innovative solutions that drive your business forward. 
-          Our team of experts is ready to help you achieve your goals.
+          Let's work together to create innovative solutions that drive your business forward.
         </CTADescription>
         <CTAButton to="/contact">Get Started Today</CTAButton>
       </CTAContent>
