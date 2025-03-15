@@ -1,0 +1,35 @@
+{
+  "title": "Nos Services",
+  "subtitle": "Découvrez comment nous pouvons transformer votre entreprise grâce à notre gamme complète de services.",
+  "categories": {
+    "dev": {
+      "title": "Services de Développement",
+      "description": "Nous créons des sites web et des applications mobiles réactifs en utilisant les dernières technologies pour garantir que vos produits numériques se démarquent et performent sur tous les appareils."
+    },
+    "consulting": {
+      "title": "Conseil IT",
+      "description": "Nos consultants experts fournissent des conseils stratégiques pour optimiser votre infrastructure IT, améliorer l'efficacité et aligner la technologie sur vos objectifs commerciaux."
+    },
+    "migration": {
+      "title": "Migration d'Infrastructure",
+      "description": "Nous vous aidons à effectuer une transition en douceur vers de nouvelles solutions d'infrastructure, en minimisant les temps d'arrêt et en assurant un processus de migration fluide."
+    },
+    "monitoring": {
+      "title": "Surveillance",
+      "description": "Nos solutions de surveillance complètes fournissent des informations en temps réel sur vos systèmes, vous aidant à prévenir les problèmes avant qu'ils n'impactent votre activité."
+    },
+    "devops": {
+      "title": "DevOps/SysOps",
+      "description": "Nous mettons en œuvre des pratiques DevOps et des opérations système efficaces pour rationaliser votre pipeline de développement et améliorer la fiabilité des déploiements."
+    },
+    "linux": {
+      "title": "Administration Linux",
+      "description": "Avec une connaissance approfondie de l'administration Linux, nous pouvons vous aider à gérer votre environnement Linux et garantir qu'il fonctionne de manière fluide et sécurisée."
+    }
+  },
+  "cta": {
+    "title": "Prêt à Commencer?",
+    "description": "Contactez-nous aujourd'hui pour discuter de votre projet.",
+    "button": "Contactez-nous"
+  }
+} 

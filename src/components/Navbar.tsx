@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
-const NavContainer = styled.nav`
+interface NavContainerProps {
+  isScrolled: boolean;
+}
+
+const NavContainer = styled.nav<NavContainerProps>`
   background-color: #f8f9fa;
   padding: 1rem 0;
   position: sticky;
@@ -49,6 +55,8 @@ const LogoText = styled.span`
 
 const NavLinks = styled.div<{ isOpen: boolean }>`
   display: flex;
+  align-items: center;
+  gap: 2rem;
   
   @media (max-width: 768px) {
     flex-direction: column;
@@ -70,14 +78,15 @@ const NavLinks = styled.div<{ isOpen: boolean }>`
 
 const NavLink = styled(Link)`
   color: var(--primary-color);
-  margin-left: 2rem;
   font-weight: 500;
   position: relative;
+  text-decoration: none;
+  padding: 0.5rem 0;
   
   &:after {
     content: '';
     position: absolute;
-    bottom: -5px;
+    bottom: -2px;
     left: 0;
     width: 0;
     height: 2px;
@@ -94,9 +103,8 @@ const NavLink = styled(Link)`
   }
   
   @media (max-width: 768px) {
-    margin: 1rem 0;
+    margin: 0.5rem 0;
     text-align: center;
-    margin-left: 0;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -172,8 +180,22 @@ const ActiveIndicator = styled.span<{ isActive: boolean }>`
   background-color: var(--accent-color);
 `;
 
+const NavbarEnd = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+  }
+`;
+
 const Navbar: React.FC = () => {
+  const { t, i18n } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   
   const toggleMenu = () => {
@@ -181,36 +203,32 @@ const Navbar: React.FC = () => {
   };
   
   const scrollToTop = () => {
-    // If already on homepage, scroll to top
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
     
-    // Close mobile menu if open
     if (isOpen) {
       setIsOpen(false);
     }
   };
   
   const scrollToServices = () => {
-    if (location.pathname !== '/') {
+    const currentLang = i18n.language;
+    if (location.pathname !== `/${currentLang}`) {
       // If not on homepage, navigate to homepage first
-      window.location.href = '/#services-section';
+      window.location.href = `/${currentLang}#services-section`;
     } else {
       // If already on homepage, just scroll
       const servicesSection = document.getElementById('services-section');
       if (servicesSection) {
-        // Set a flag in sessionStorage to indicate we're scrolling to services
         sessionStorage.setItem('scrollToServices', 'true');
         servicesSection.scrollIntoView({ behavior: 'smooth' });
         
-        // Force the animation to be visible
         const event = new CustomEvent('servicesVisible');
         window.dispatchEvent(event);
       }
     }
-    // Close mobile menu if open
     if (isOpen) {
       setIsOpen(false);
     }
@@ -218,44 +236,48 @@ const Navbar: React.FC = () => {
   
   // Check if a path is active
   const isActive = (path: string) => {
+    const currentLang = i18n.language;
     if (path === '/') {
-      return location.pathname === '/';
+      return location.pathname === `/${currentLang}`;
     }
-    return location.pathname.startsWith(path);
+    return location.pathname === `/${currentLang}${path}`;
+  };
+  
+  // Get the current language prefix for links
+  const getLangPath = (path: string) => {
+    const currentLang = i18n.language;
+    return path === '/' ? `/${currentLang}` : `/${currentLang}${path}`;
   };
   
   return (
-    <NavContainer>
+    <NavContainer isScrolled={isScrolled}>
       <NavContent>
-        <LogoContainer to="/" onClick={(e) => {
-          if (location.pathname === '/') {
-            e.preventDefault();
-            scrollToTop();
-          }
-        }}>
+        <LogoContainer to={getLangPath('/')} onClick={scrollToTop}>
           <LogoImage src="/images/logo/logo.png" alt="Drenlia Logo" />
           <LogoText>Drenlia</LogoText>
         </LogoContainer>
-        <MenuButton onClick={toggleMenu} aria-label="Toggle menu">
-          {isOpen ? '✕' : '☰'}
+        
+        <MenuButton onClick={toggleMenu}>
+          <i className="fas fa-bars" />
         </MenuButton>
+        
         <NavLinks isOpen={isOpen}>
-          <NavLinkButton onClick={scrollToServices}>
-            Services
-            <ActiveIndicator isActive={location.hash === '#services-section'} />
-          </NavLinkButton>
-          <NavLink to="/about">
-            About
+          <NavLink to={getLangPath('/')} onClick={scrollToTop}>
+            {t('nav.home')}
+            <ActiveIndicator isActive={isActive('/')} />
+          </NavLink>
+          <NavLink to={getLangPath('/about')}>
+            {t('nav.about')}
             <ActiveIndicator isActive={isActive('/about')} />
           </NavLink>
-          <NavLink to="/projects">
-            Projects
-            <ActiveIndicator isActive={isActive('/projects')} />
-          </NavLink>
-          <NavLink to="/contact">
-            Contact
+          <NavLinkButton onClick={scrollToServices}>
+            {t('nav.services')}
+          </NavLinkButton>
+          <NavLink to={getLangPath('/contact')}>
+            {t('nav.contact')}
             <ActiveIndicator isActive={isActive('/contact')} />
           </NavLink>
+          <LanguageSwitcher />
         </NavLinks>
       </NavContent>
     </NavContainer>

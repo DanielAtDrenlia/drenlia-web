@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import { useTranslation } from 'react-i18next';
 import CallToAction from '../components/CallToAction';
 import InitialsAvatar from '../components/InitialsAvatar';
 import type { TeamMember } from '../services/apiService';
@@ -351,6 +352,7 @@ const TeamMemberBio = styled.p`
 `;
 
 const AboutPage: React.FC = () => {
+  const { t } = useTranslation('about');
   const [sections, setSections] = useState<AboutSectionType[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -462,9 +464,9 @@ const AboutPage: React.FC = () => {
           if (el) el.id = 'header';
         }}
       >
-        <AboutTitle isVisible={visibleSections.header}>About Us</AboutTitle>
+        <AboutTitle isVisible={visibleSections.header}>{t('title')}</AboutTitle>
         <AboutSubtitle isVisible={visibleSections.header}>
-          Learn about our mission, our values, and the team that makes it all possible.
+          {t('subtitle')}
         </AboutSubtitle>
       </AboutHeader>
 
@@ -509,7 +511,7 @@ const AboutPage: React.FC = () => {
         }}
         isVisible={visibleSections.team}
       >
-        <SectionTitle isVisible={visibleSections.team}>Our Team</SectionTitle>
+        <SectionTitle isVisible={visibleSections.team}>{t('team.title')}</SectionTitle>
         <TeamGrid>
           {teamMembers.map((member, index) => (
             <TeamMember

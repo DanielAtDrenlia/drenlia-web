@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const HeroContainer = styled.section`
   height: 80vh;
@@ -140,6 +141,7 @@ const SecondaryButton = styled(Link)`
 `;
 
 const Hero: React.FC = () => {
+  const { t, i18n } = useTranslation('home');
   const videoRef = useRef<HTMLVideoElement>(null);
   
   useEffect(() => {
@@ -169,14 +171,20 @@ const Hero: React.FC = () => {
       </VideoBackground>
       <Overlay />
       <HeroContent>
-        <HeroTitle>Welcome to Drenlia</HeroTitle>
+        <HeroTitle>{t('hero.title')}</HeroTitle>
         <HeroSubtitle>
-          We create innovative solutions for modern problems. Explore our services and projects.
+          {t('hero.subtitle')}
         </HeroSubtitle>
         <HeroButtons>
-          <ServicesButton onClick={scrollToServices}>Services</ServicesButton>
-          <PrimaryButton to="/projects">Projects</PrimaryButton>
-          <SecondaryButton to="/contact">Contact Us</SecondaryButton>
+          <ServicesButton onClick={scrollToServices}>
+            {t('hero.buttons.services')}
+          </ServicesButton>
+          <PrimaryButton to={`/${i18n.language}/projects`}>
+            {t('hero.buttons.projects')}
+          </PrimaryButton>
+          <SecondaryButton to={`/${i18n.language}/contact`}>
+            {t('hero.buttons.contact')}
+          </SecondaryButton>
         </HeroButtons>
       </HeroContent>
     </HeroContainer>

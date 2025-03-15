@@ -1,6 +1,7 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import './App.css';
+import './i18n';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollToTopButton from './components/ScrollToTopButton';
@@ -20,39 +21,62 @@ import AdminUsersPage from './pages/admin/UsersPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Loading component for suspense fallback
+const Loader = () => (
+  <div className="flex justify-center py-12">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+  </div>
+);
+
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Public routes */}
-          <Route element={<Layout><Outlet /></Layout>}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-          </Route>
+      <Suspense fallback={<Loader />}>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* Language redirect for root */}
+            <Route path="/" element={<Navigate to="/en" replace />} />
 
-          {/* Admin login route */}
-          <Route path="/admin/login" element={<AdminLoginPage />} />
-          
-          {/* Protected admin routes - using nested routes */}
-          <Route path="/admin" element={<ProtectedRoute requireAdmin={true} />}>
-            <Route element={<AdminDashboardPage />}>
-              <Route index element={<AdminHomePage />} />
-              <Route path="about" element={<AdminAboutPage />} />
-              <Route path="team" element={<AdminTeamPage />} />
-              <Route path="users" element={<AdminUsersPage />} />
+            {/* Public routes with language prefix */}
+            {['en', 'fr'].map((lang) => (
+              <Route key={lang} path={`/${lang}`} element={<Layout><Outlet /></Layout>}>
+                <Route index element={<HomePage />} />
+                <Route path="about" element={<AboutPage />} />
+                <Route path="projects" element={<ProjectsPage />} />
+                <Route path="contact" element={<ContactPage />} />
+              </Route>
+            ))}
+
+            {/* Admin routes (no language prefix needed) */}
+            <Route path="/admin/login" element={<AdminLoginPage />} />
+            
+            <Route path="/admin" element={<ProtectedRoute requireAdmin={true} />}>
+              <Route element={<AdminDashboardPage />}>
+                <Route index element={<AdminHomePage />} />
+                <Route path="about" element={<AdminAboutPage />} />
+                <Route path="team" element={<AdminTeamPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* 404 route */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        <ScrollToTopButton />
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-      </Router>
+            {/* 404 route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          <ScrollToTopButton />
+          <ToastContainer 
+            position="top-right" 
+            autoClose={3000} 
+            hideProgressBar={false} 
+            newestOnTop 
+            closeOnClick 
+            rtl={false} 
+            pauseOnFocusLoss 
+            draggable 
+            pauseOnHover 
+          />
+        </Router>
+      </Suspense>
     </AuthProvider>
   );
 }

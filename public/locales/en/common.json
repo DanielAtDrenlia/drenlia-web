@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "contact": "Contact",
+    "login": "Login",
+    "admin": "Admin"
+  },
+  "footer": {
+    "about": {
+      "title": "About Us",
+      "description": "We create innovative solutions for modern problems. Explore our services and projects."
+    },
+    "links": {
+      "title": "Quick Links",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    },
+    "contact": {
+      "title": "Contact Info",
+      "email": "info@drenlia.com",
+      "phone": "+1 (438) 123-4567",
+      "address": "7037, rue des Tournesols\nSaint-Hubert, QC J3Y 8S2"
+    },
+    "copyright": "© {{year}} Drenlia. All rights reserved."
+  },
+  "loading": "Loading...",
+  "error": {
+    "generic": "An error occurred. Please try again.",
+    "notFound": "Page not found"
+  }
+} 

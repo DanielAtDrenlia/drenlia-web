@@ -1,0 +1,56 @@
+{
+  "title": "Contactez-nous",
+  "subtitle": "Vous avez une question ? Nous aimerions vous entendre.",
+  "form": {
+    "name": {
+      "label": "Nom",
+      "placeholder": "Votre nom"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "Votre adresse email"
+    },
+    "subject": {
+      "label": "Sujet",
+      "placeholder": "De quoi s'agit-il ?"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Votre message"
+    },
+    "submit": {
+      "button": "Envoyer",
+      "sending": "Envoi..."
+    },
+    "status": {
+      "success": "Merci ! Votre message a été envoyé.",
+      "error": "Désolé, une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "location": {
+    "title": "Notre adresse",
+    "address": "123 Tech Street\nDigital City, DC 12345\nÉtats-Unis"
+  },
+  "phone": {
+    "title": "Téléphone",
+    "number": "+1 (555) 123-4567"
+  },
+  "email": {
+    "title": "Email"
+  },
+  "hours": {
+    "title": "Heures d'ouverture",
+    "weekdays": "Lundi - Vendredi : 9h00 - 18h00",
+    "weekends": "Samedi - Dimanche : Fermé"
+  },
+  "captcha": {
+    "title": "Veuillez vérifier que vous êtes humain",
+    "placeholder": "Entrez le texte de l'image",
+    "refresh": "Actualiser le Captcha",
+    "verify": "Vérifier",
+    "loading": "Chargement du captcha...",
+    "valid": "Vérification réussie",
+    "invalid": "Code incorrect, veuillez réessayer",
+    "error": "Erreur de chargement du captcha. Veuillez réessayer."
+  }
+} 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const FooterContainer = styled.footer`
   background-color: var(--primary-color);
@@ -172,6 +173,38 @@ const ContactLabel = styled.span`
   vertical-align: top;
 `;
 
+const FooterText = styled.p`
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+`;
+
+const FooterLinks = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const ContactInfo = styled.div`
+  margin-top: 1rem;
+`;
+
+const ContactItem = styled.div`
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+`;
+
+const FooterBottom = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+`;
+
 /**
  * ObfuscatedEmail component that prevents easy copy-pasting
  * by splitting the email into parts and using CSS to display it
@@ -249,53 +282,52 @@ const ObfuscatedEmail: React.FC = () => {
 };
 
 const Footer: React.FC = () => {
+  const { t, i18n } = useTranslation('common');
   const currentYear = new Date().getFullYear();
   
   return (
     <FooterContainer>
       <FooterContent>
         <FooterSection>
-          <FooterTitle>Drenlia</FooterTitle>
-          <p>Creating innovative solutions for modern problems.</p>
-          <SocialLinks>
-            <SocialIcon href="https://github.com/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-github"></i>
-            </SocialIcon>
-            <SocialIcon href="https://twitter.com/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-twitter"></i>
-            </SocialIcon>
-            <SocialIcon href="https://linkedin.com/in/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-linkedin"></i>
-            </SocialIcon>
-          </SocialLinks>
+          <FooterTitle>{t('footer.about.title', 'About Us')}</FooterTitle>
+          <FooterText>
+            We create innovative solutions for modern problems. Explore our services and projects.
+          </FooterText>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>Quick Links</FooterTitle>
-          <FooterLink to="/">Home</FooterLink>
-          <FooterLink to="/about">About</FooterLink>
-          <FooterLink to="/projects">Projects</FooterLink>
-          <FooterLink to="/contact">Contact</FooterLink>
+          <FooterTitle>{t('footer.links.title', 'Quick Links')}</FooterTitle>
+          <FooterLinks>
+            <FooterLink to={`/${i18n.language}`}>Home</FooterLink>
+            <FooterLink to={`/${i18n.language}/about`}>About</FooterLink>
+            <FooterLink to={`/${i18n.language}/services`}>Services</FooterLink>
+            <FooterLink to={`/${i18n.language}/contact`}>Contact</FooterLink>
+          </FooterLinks>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>Contact</FooterTitle>
-          <p><ContactLabel>Email:</ContactLabel> <ObfuscatedEmail /></p>
-          <p><ContactLabel>Phone:</ContactLabel> <PhoneContainer>+1 (555) 123-4567</PhoneContainer></p>
-          <div>
-            <ContactLabel>Address:</ContactLabel>
-            <AddressContainer>
-              <AddressLine>7037 rue des Tournesols</AddressLine>
-              <AddressLine>Saint-Hubert, QC</AddressLine>
-              <AddressLine>J3Y 8S2</AddressLine>
-              <AddressLine>Canada</AddressLine>
-            </AddressContainer>
-          </div>
+          <FooterTitle>{t('footer.contact.title', 'Contact')}</FooterTitle>
+          <ContactInfo>
+            <ContactItem>
+              <ContactLabel>Email:</ContactLabel> <ObfuscatedEmail />
+            </ContactItem>
+            <ContactItem>
+              <ContactLabel>Phone:</ContactLabel> <PhoneContainer>+1 (555) 123-4567</PhoneContainer>
+            </ContactItem>
+            <ContactItem>
+              <ContactLabel>Address:</ContactLabel>
+              <AddressContainer>
+                <AddressLine>123 Tech Street</AddressLine>
+                <AddressLine>Digital City, DC 12345</AddressLine>
+                <AddressLine>United States</AddressLine>
+              </AddressContainer>
+            </ContactItem>
+          </ContactInfo>
         </FooterSection>
       </FooterContent>
       
       <Copyright>
-        &copy; {currentYear} Drenlia. All rights reserved.
+        © {currentYear} Drenlia. All rights reserved.
       </Copyright>
     </FooterContainer>
   );
