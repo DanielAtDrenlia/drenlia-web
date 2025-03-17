@@ -12,7 +12,7 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
 });
 
 // Read and execute migration file
-const migrationFile = path.join(__dirname, 'migrations', '20240320_add_french_translations.sql');
+const migrationFile = path.join(__dirname, 'migrations', '005_create_settings_table.sql');
 const migration = fs.readFileSync(migrationFile, 'utf8');
 
 // Run migration in a transaction

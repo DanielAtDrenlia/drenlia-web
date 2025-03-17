@@ -11,6 +11,7 @@ const auth = require('./auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const { createCanvas } = require('canvas');
 const translateRouter = require('./routes/translate');
 
@@ -50,6 +51,15 @@ app.use((req, res, next) => {
   if (req.isAuthenticated()) {
     console.log(`User: ${req.user.email} (Admin: ${req.user.admin ? 'Yes' : 'No'})`);
   }
+  next();
+});
+
+// Debug middleware to log request details
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] Request: ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
   next();
 });
 
@@ -853,6 +863,148 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Settings routes
+app.get('/api/admin/settings', auth.isAdmin, (req, res) => {
+  try {
+    const settings = db.settings.getAllSettings();
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching settings' });
+  }
+});
+
+app.post('/api/admin/settings', auth.isAdmin, (req, res) => {
+  try {
+    const { key, value } = req.body;
+    
+    if (!key || value === undefined) {
+      return res.status(400).json({ success: false, message: 'Key and value are required' });
+    }
+    
+    db.settings.setSetting(key, value);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating setting:', error);
+    res.status(500).json({ success: false, message: 'Error updating setting' });
+  }
+});
+
+// Translation routes
+app.get('/api/admin/translations', auth.isAdmin, async (req, res) => {
+  console.log('Translations GET route hit');
+  try {
+    const enDir = path.join(__dirname, '..', 'public', 'locales', 'en');
+    const frDir = path.join(__dirname, '..', 'public', 'locales', 'fr');
+
+    console.log('Directories:', { enDir, frDir });
+
+    // Check if directories exist
+    try {
+      await fsPromises.access(enDir);
+      await fsPromises.access(frDir);
+      console.log('Directories exist');
+    } catch (error) {
+      console.error('Translation directories not found:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Translation directories not found',
+        error: error.message,
+        paths: { enDir, frDir }
+      });
+    }
+
+    // Read all JSON files from both directories
+    const [enFiles, frFiles] = await Promise.all([
+      fsPromises.readdir(enDir).then(files => files.filter(file => file.endsWith('.json'))),
+      fsPromises.readdir(frDir).then(files => files.filter(file => file.endsWith('.json')))
+    ]);
+
+    console.log('Files found:', { enFiles, frFiles });
+
+    // Create pairs of translations
+    const translations = await Promise.all(enFiles.map(async filename => {
+      try {
+        const [enContent, frContent] = await Promise.all([
+          fsPromises.readFile(path.join(enDir, filename), 'utf8').then(JSON.parse),
+          fsPromises.readFile(path.join(frDir, filename), 'utf8').then(JSON.parse)
+        ]);
+
+        return {
+          en: {
+            name: filename,
+            content: enContent
+          },
+          fr: {
+            name: filename,
+            content: frContent
+          }
+        };
+      } catch (error) {
+        console.error(`Error processing file ${filename}:`, error);
+        return null;
+      }
+    }));
+
+    // Filter out any failed translations
+    const validTranslations = translations.filter(t => t !== null);
+
+    console.log('Sending response with translations');
+    res.json({ success: true, translations: validTranslations });
+  } catch (error) {
+    console.error('Error fetching translations:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching translations',
+      error: error.message 
+    });
+  }
+});
+
+app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
+  try {
+    const { locale, filename, content } = req.body;
+
+    if (!locale || !filename || !content) {
+      return res.status(400).json({ success: false, message: 'Locale, filename, and content are required' });
+    }
+
+    if (!['en', 'fr'].includes(locale)) {
+      return res.status(400).json({ success: false, message: 'Invalid locale' });
+    }
+
+    const filePath = path.join(__dirname, '..', 'public', 'locales', locale, filename);
+    
+    // Check if file exists
+    try {
+      await fsPromises.access(filePath);
+    } catch (error) {
+      console.error('Translation file not found:', error);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Translation file not found',
+        error: error.message,
+        path: filePath
+      });
+    }
+    
+    // Write the updated content back to the file
+    await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating translation:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating translation',
+      error: error.message 
+    });
+  }
+});
+
+// Routes
+app.use('/api/translate', translateRouter);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err.message);
@@ -865,9 +1017,6 @@ process.on('SIGINT', () => {
   db.closeDb();
   process.exit(0);
 });
-
-// Routes
-app.use('/api/translate', translateRouter);
 
 // Start server
 app.listen(PORT, () => {
