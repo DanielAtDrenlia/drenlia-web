@@ -156,10 +156,6 @@ const Hero: React.FC = () => {
       // Set a flag in sessionStorage to indicate we're scrolling to services
       sessionStorage.setItem('scrollToServices', 'true');
       servicesSection.scrollIntoView({ behavior: 'smooth' });
-      
-      // Force the animation to be visible
-      const event = new CustomEvent('servicesVisible');
-      window.dispatchEvent(event);
     }
   };
   

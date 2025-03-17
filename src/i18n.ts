@@ -12,16 +12,16 @@ i18n
   .use(initReactI18next)
   // init i18next
   .init({
-    fallbackLng: 'en',
-    supportedLngs: ['en', 'fr'],
+    fallbackLng: 'fr',
+    supportedLngs: ['fr', 'en'],
     defaultNS: 'common',
     ns: ['common', 'about', 'home', 'contact', 'projects', 'services'],
     
     // Language detection options
     detection: {
-      order: ['path', 'navigator'],
+      order: ['navigator', 'htmlTag', 'path', 'subdomain'],
       lookupFromPathIndex: 0,
-      checkWhitelist: true
+      checkWhitelist: true,
     },
 
     interpolation: {
@@ -30,6 +30,10 @@ i18n
 
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
+    },
+
+    react: {
+      useSuspense: true,
     },
   });
 

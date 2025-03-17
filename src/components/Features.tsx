@@ -238,34 +238,22 @@ const Features: React.FC = () => {
   const cardPositions = Array(6).fill(0).map((_, index) => getRandomPosition(index));
   
   useEffect(() => {
-    // Handle direct navigation to #services-section
-    if (window.location.hash === '#services-section') {
-      setTimeout(() => {
-        const servicesSection = document.getElementById('services-section');
-        if (servicesSection) {
-          servicesSection.scrollIntoView({ behavior: 'smooth' });
-          setIsVisible(true);
-        }
-      }, 100);
-    }
-    
-    // Check if we should scroll to services from sessionStorage
-    const shouldScrollToServices = sessionStorage.getItem('scrollToServices');
-    if (shouldScrollToServices) {
-      sessionStorage.removeItem('scrollToServices');
-      setIsVisible(true);
-    }
-    
     // Set up intersection observer
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
+        // Only set visible if the section is significantly in view
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+          // Add a small delay to ensure smooth scrolling has completed
+          setTimeout(() => {
+            setIsVisible(true);
+          }, 100);
+        } else {
+          setIsVisible(false);
         }
       },
       {
-        threshold: 0.1,
+        threshold: [0.3], // Require 30% of the section to be visible
+        rootMargin: '-10% 0px' // Trigger slightly after entering viewport
       }
     );
     
@@ -276,14 +264,26 @@ const Features: React.FC = () => {
     return () => observer.disconnect();
   }, []);
   
-  // Handle scroll to services event
+  // Handle direct navigation to #services-section
   useEffect(() => {
-    const handleServicesVisible = () => {
-      setIsVisible(true);
-    };
-    
-    window.addEventListener('servicesVisible', handleServicesVisible);
-    return () => window.removeEventListener('servicesVisible', handleServicesVisible);
+    if (window.location.hash === '#services-section') {
+      const servicesSection = document.getElementById('services-section');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+  
+  // Handle scroll to services from sessionStorage
+  useEffect(() => {
+    const shouldScrollToServices = sessionStorage.getItem('scrollToServices');
+    if (shouldScrollToServices) {
+      sessionStorage.removeItem('scrollToServices');
+      const servicesSection = document.getElementById('services-section');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, []);
   
   const services = [

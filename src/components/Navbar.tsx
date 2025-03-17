@@ -76,12 +76,23 @@ const NavLinks = styled.div<{ isOpen: boolean }>`
   }
 `;
 
-const NavLink = styled(Link)`
+// Base styles for all navigation items
+const navItemStyles = `
   color: var(--primary-color);
   font-weight: 500;
+  font-size: 1rem;
+  font-family: inherit;
   position: relative;
   text-decoration: none;
   padding: 0.5rem 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  outline: none;
+  user-select: none;
   
   &:after {
     content: '';
@@ -96,10 +107,20 @@ const NavLink = styled(Link)`
   
   &:hover {
     color: var(--accent-color);
+    background: none;
   }
   
   &:hover:after {
     width: 100%;
+  }
+  
+  &:focus {
+    outline: none;
+    background: none;
+  }
+  
+  &:active {
+    background: none;
   }
   
   @media (max-width: 768px) {
@@ -111,45 +132,12 @@ const NavLink = styled(Link)`
   }
 `;
 
+const NavLink = styled(Link)`
+  ${navItemStyles}
+`;
+
 const NavLinkButton = styled.button`
-  color: var(--primary-color);
-  margin-left: 2rem;
-  font-weight: 500;
-  position: relative;
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 1rem;
-  font-family: inherit;
-  cursor: pointer;
-  
-  &:after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background-color: var(--accent-color);
-    transition: width 0.3s ease;
-  }
-  
-  &:hover {
-    color: var(--accent-color);
-  }
-  
-  &:hover:after {
-    width: 100%;
-  }
-  
-  @media (max-width: 768px) {
-    margin: 1rem 0;
-    text-align: center;
-    margin-left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
+  ${navItemStyles}
 `;
 
 const MenuButton = styled.button`
@@ -262,16 +250,17 @@ const Navbar: React.FC = () => {
         </MenuButton>
         
         <NavLinks isOpen={isOpen}>
-          <NavLink to={getLangPath('/')} onClick={scrollToTop}>
-            {t('nav.home')}
-            <ActiveIndicator isActive={isActive('/')} />
-          </NavLink>
           <NavLink to={getLangPath('/about')}>
             {t('nav.about')}
             <ActiveIndicator isActive={isActive('/about')} />
           </NavLink>
+          <NavLink to={getLangPath('/projects')}>
+            {t('nav.projects')}
+            <ActiveIndicator isActive={isActive('/projects')} />
+          </NavLink>
           <NavLinkButton onClick={scrollToServices}>
             {t('nav.services')}
+            <ActiveIndicator isActive={false} />
           </NavLinkButton>
           <NavLink to={getLangPath('/contact')}>
             {t('nav.contact')}

@@ -12,9 +12,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { createCanvas } = require('canvas');
+const translateRouter = require('./routes/translate');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3011;
 
 // Trust proxy headers - this is important for correct URL construction behind proxies
 app.set('trust proxy', true);
@@ -380,7 +381,7 @@ app.get('/api/about', (req, res) => {
 
 app.post('/api/admin/about', auth.isAdmin, (req, res) => {
   try {
-    const { title, description, image_url, display_order } = req.body;
+    const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
     if (!title || !description) {
       return res.status(400).json({ success: false, message: 'Title and description are required' });
@@ -388,7 +389,9 @@ app.post('/api/admin/about', auth.isAdmin, (req, res) => {
     
     const id = db.about.createSection({
       title,
+      fr_title: fr_title || null,
       description,
+      fr_description: fr_description || null,
       image_url: image_url || null,
       display_order: display_order || 0
     });
@@ -426,17 +429,15 @@ app.put('/api/admin/about/reorder', auth.isAdmin, (req, res) => {
 app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { title, description, image_url, display_order } = req.body;
-    
-    if (!title || !description) {
-      return res.status(400).json({ success: false, message: 'Title and description are required' });
-    }
+    const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
     const success = db.about.updateSection(id, {
       title,
+      fr_title,
       description,
-      image_url: image_url !== undefined ? image_url : undefined,
-      display_order: display_order || 0
+      fr_description,
+      image_url,
+      display_order
     });
     
     if (success) {
@@ -564,7 +565,7 @@ app.post('/api/admin/team', auth.isAdmin, (req, res) => {
 app.put('/api/admin/team/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, title, bio, image_url, display_order } = req.body;
+    const { name, title, bio, image_url, display_order, fr_title, fr_bio } = req.body;
     
     if (!name || !title) {
       return res.status(400).json({ success: false, message: 'Name and title are required' });
@@ -596,7 +597,9 @@ app.put('/api/admin/team/:id', auth.isAdmin, (req, res) => {
       title,
       bio,
       image_url: finalImageUrl,
-      display_order: display_order || 0
+      display_order: display_order || 0,
+      fr_title,
+      fr_bio
     });
     
     if (success) {
@@ -862,6 +865,9 @@ process.on('SIGINT', () => {
   db.closeDb();
   process.exit(0);
 });
+
+// Routes
+app.use('/api/translate', translateRouter);
 
 // Start server
 app.listen(PORT, () => {

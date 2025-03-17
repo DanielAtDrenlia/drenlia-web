@@ -3,6 +3,7 @@
     "home": "Accueil",
     "about": "À propos",
     "services": "Services",
+    "projects": "Projets",
     "contact": "Contact",
     "login": "Connexion",
     "admin": "Admin"
@@ -21,6 +22,7 @@
       "title": "Coordonnées",
       "email": "info@drenlia.com",
       "phone": "+1 (438) 123-4567",
+      "phone_tooltip": "C'est évidemment un faux numéro ! Veuillez utiliser l'adresse e-mail ci-dessus.",
       "address": "7037, rue des Tournesols\nSaint-Hubert, QC J3Y 8S2"
     },
     "copyright": "© {{year}} Drenlia. Tous droits réservés."

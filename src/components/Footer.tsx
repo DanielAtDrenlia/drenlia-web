@@ -129,7 +129,7 @@ const PhoneContainer = styled.span`
   cursor: help;
   
   &:hover::after {
-    content: "this is obviously a phony number! Please use the email address above.";
+    content: attr(data-tooltip);
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -291,35 +291,34 @@ const Footer: React.FC = () => {
         <FooterSection>
           <FooterTitle>{t('footer.about.title', 'About Us')}</FooterTitle>
           <FooterText>
-            We create innovative solutions for modern problems. Explore our services and projects.
+          {t('footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
           </FooterText>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.links.title', 'Quick Links')}</FooterTitle>
+          <FooterTitle>{t('footer.links.title')}</FooterTitle>
           <FooterLinks>
-            <FooterLink to={`/${i18n.language}`}>Home</FooterLink>
-            <FooterLink to={`/${i18n.language}/about`}>About</FooterLink>
-            <FooterLink to={`/${i18n.language}/services`}>Services</FooterLink>
-            <FooterLink to={`/${i18n.language}/contact`}>Contact</FooterLink>
+            <FooterLink to={`/${i18n.language}`}>{t('nav.home')}</FooterLink>
+            <FooterLink to={`/${i18n.language}/about`}>{t('nav.about')}</FooterLink>
+            <FooterLink to={`/${i18n.language}/services`}>{t('nav.services')}</FooterLink>
+            <FooterLink to={`/${i18n.language}/contact`}>{t('nav.contact')}</FooterLink>
           </FooterLinks>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.contact.title', 'Contact')}</FooterTitle>
+          <FooterTitle>{t('footer.contact.title')}</FooterTitle>
           <ContactInfo>
             <ContactItem>
               <ContactLabel>Email:</ContactLabel> <ObfuscatedEmail />
             </ContactItem>
             <ContactItem>
-              <ContactLabel>Phone:</ContactLabel> <PhoneContainer>+1 (555) 123-4567</PhoneContainer>
+              <PhoneContainer data-tooltip={t('footer.contact.phone_tooltip')}>{t('footer.contact.phone')}</PhoneContainer>
             </ContactItem>
             <ContactItem>
-              <ContactLabel>Address:</ContactLabel>
               <AddressContainer>
-                <AddressLine>123 Tech Street</AddressLine>
-                <AddressLine>Digital City, DC 12345</AddressLine>
-                <AddressLine>United States</AddressLine>
+                {t('footer.contact.address').split('\n').map((line, index) => (
+                  <AddressLine key={index}>{line}</AddressLine>
+                ))}
               </AddressContainer>
             </ContactItem>
           </ContactInfo>
@@ -327,7 +326,7 @@ const Footer: React.FC = () => {
       </FooterContent>
       
       <Copyright>
-        © {currentYear} Drenlia. All rights reserved.
+        {t('footer.copyright', { year: currentYear })}
       </Copyright>
     </FooterContainer>
   );

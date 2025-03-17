@@ -1,13 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember, TeamMember } from '../../services/apiService';
+import { getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember, TeamMember, translateText } from '../../services/apiService';
 import Modal from '../../components/Modal';
+import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 // Form data interface for team member
 interface TeamMemberForm {
   name: string;
   title: string;
+  fr_title: string;
   bio: string;
+  fr_bio: string;
   image_url: string;
   display_order: number;
 }
@@ -18,15 +22,19 @@ interface TeamMemberForm {
  */
 const TeamPage: React.FC = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation('common');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'fr'>('en');
   const [formData, setFormData] = useState<TeamMemberForm>({
     name: '',
     title: '',
+    fr_title: '',
     bio: '',
+    fr_bio: '',
     image_url: '',
     display_order: 0
   });
@@ -62,7 +70,9 @@ const TeamPage: React.FC = () => {
     setFormData({
       name: '',
       title: '',
+      fr_title: '',
       bio: '',
+      fr_bio: '',
       image_url: '',
       display_order: members.length > 0 ? Math.max(...members.map(m => m.display_order)) + 1 : 1
     });
@@ -76,7 +86,9 @@ const TeamPage: React.FC = () => {
     setFormData({
       name: member.name,
       title: member.title,
+      fr_title: member.fr_title || '',
       bio: member.bio || '',
+      fr_bio: member.fr_bio || '',
       image_url: member.image_url || '',
       display_order: member.display_order
     });
@@ -167,13 +179,25 @@ const TeamPage: React.FC = () => {
     try {
       setSavingMember(true);
       
+      // Prepare data with proper null handling for French fields
+      const memberData = {
+        ...formData,
+        fr_title: formData.fr_title.trim() || null,
+        fr_bio: formData.fr_bio.trim() || null
+      };
+      
+      // Debug: Log the data being sent
+      console.log('Saving member data:', memberData);
+      
       if (selectedMember) {
         // Update existing member
-        const result = await updateTeamMember(selectedMember.team_id, formData);
+        const result = await updateTeamMember(selectedMember.team_id, memberData);
+        console.log('Update result:', result);
         
         if (result.success) {
           // Refresh the members list
           const updatedMembers = await getTeamMembers();
+          console.log('Updated members:', updatedMembers);
           // Sort members by display_order
           const sortedMembers = [...updatedMembers].sort((a, b) => a.display_order - b.display_order);
           setMembers(sortedMembers);
@@ -183,11 +207,13 @@ const TeamPage: React.FC = () => {
         }
       } else {
         // Create new member
-        const result = await createTeamMember(formData);
+        const result = await createTeamMember(memberData);
+        console.log('Create result:', result);
         
         if (result.success) {
           // Refresh the members list
           const updatedMembers = await getTeamMembers();
+          console.log('Updated members:', updatedMembers);
           // Sort members by display_order
           const sortedMembers = [...updatedMembers].sort((a, b) => a.display_order - b.display_order);
           setMembers(sortedMembers);
@@ -242,6 +268,23 @@ const TeamPage: React.FC = () => {
     }
   };
 
+  // Handle translation
+  const handleTranslate = async (field: 'title' | 'bio') => {
+    try {
+      const textToTranslate = field === 'title' ? formData.title : formData.bio;
+      if (!textToTranslate) return;
+
+      const translatedText = await translateText(textToTranslate);
+      setFormData(prev => ({
+        ...prev,
+        [field === 'title' ? 'fr_title' : 'fr_bio']: translatedText,
+      }));
+    } catch (error) {
+      console.error('Translation error:', error);
+      setError('Failed to translate text. Please try again.');
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
@@ -251,15 +294,39 @@ const TeamPage: React.FC = () => {
             Manage team member profiles that appear on the About page
           </p>
         </div>
-        <button
-          onClick={handleAddMember}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Team Member
-        </button>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setSelectedLanguage('en')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                selectedLanguage === 'en'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setSelectedLanguage('fr')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                selectedLanguage === 'fr'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              FR
+            </button>
+          </div>
+          <button
+            onClick={handleAddMember}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Team Member
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -325,11 +392,15 @@ const TeamPage: React.FC = () => {
                   </div>
                   <div className="ml-5">
                     <h3 className="text-lg font-medium text-gray-900">{member.name}</h3>
-                    <p className="text-sm text-gray-500">{member.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {selectedLanguage === 'en' ? member.title : member.fr_title || member.title}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600 line-clamp-3">{member.bio}</p>
+                  <p className="text-sm text-gray-600 line-clamp-3">
+                    {selectedLanguage === 'en' ? member.bio : member.fr_bio || member.bio}
+                  </p>
                 </div>
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
@@ -365,15 +436,22 @@ const TeamPage: React.FC = () => {
         </div>
       )}
 
-      {/* Team Member Modal - Now with larger size */}
+      {/* Team Member Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="bg-white p-6 rounded-lg max-w-4xl w-full mx-auto overflow-y-auto max-h-[90vh]">
+        <div className="bg-white p-6 rounded-lg max-w-6xl w-full mx-auto overflow-y-auto max-h-[90vh]">
           <h2 className="text-xl font-semibold text-gray-900 mb-5">
             {selectedMember ? 'Edit Team Member' : 'Add New Team Member'}
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-6">
+            {/* Name and Display Order */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
                 <input
@@ -385,33 +463,6 @@ const TeamPage: React.FC = () => {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   placeholder="Full Name"
                   required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Job Title</label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g. Software Engineer"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio</label>
-                <textarea
-                  id="bio"
-                  name="bio"
-                  rows={6}
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Brief professional biography"
                 />
               </div>
               
@@ -431,82 +482,149 @@ const TeamPage: React.FC = () => {
               </div>
             </div>
             
-            <div className="space-y-4">
+            {/* Job Titles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Profile Image</label>
-                
-                {/* Image Upload Area */}
-                <div 
-                  className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                >
-                  <div className="space-y-1 text-center">
-                    {formData.image_url ? (
-                      <div className="mb-4">
-                        <div className="mx-auto h-32 w-32 rounded-full overflow-hidden bg-gray-100">
-                          <img 
-                            src={formData.image_url} 
-                            alt="Preview" 
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2020.993V24H0v-2.996A14.977%2014.977%200%200112.004%2015c4.904%200%209.26%202.354%2011.996%205.993zM16.002%208.999a4%204%200%2011-8%200%204%204%200%20018%200z%22%20%2F%3E%3C%2Fsvg%3E';
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">{formData.image_url.split('/').pop()}</p>
-                      </div>
-                    ) : (
-                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                    
-                    <div className="flex text-sm text-gray-600">
-                      <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                        <span>{uploadingImage ? 'Uploading...' : 'Upload a file'}</span>
-                        <input 
-                          id="file-upload" 
-                          name="file-upload" 
-                          type="file" 
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={handleFileSelect}
-                          ref={fileInputRef}
-                          disabled={uploadingImage}
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                  </div>
-                </div>
-                
-                {uploadError && (
-                  <p className="mt-2 text-sm text-red-600">{uploadError}</p>
-                )}
-                
-                {formData.image_url && (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                      </svg>
-                      {isAutoGeneratedAvatar(formData.image_url) ? 'Use Different Avatar' : 'Remove Image'}
-                    </button>
-                    {isAutoGeneratedAvatar(formData.image_url) && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        This is an auto-generated avatar based on the name. Upload an image to replace it.
-                      </p>
-                    )}
-                  </div>
-                )}
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Job Title (English)</label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="e.g. Software Engineer"
+                  required
+                />
               </div>
+              
+              <div>
+                <label htmlFor="fr_title" className="block text-sm font-medium text-gray-700">Job Title (French)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="fr_title"
+                    name="fr_title"
+                    value={formData.fr_title}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                  <TranslateButton
+                    type="button"
+                    onClick={() => handleTranslate('title')}
+                    className="mt-1"
+                  >
+                    Translate
+                  </TranslateButton>
+                </div>
+              </div>
+            </div>
+            
+            {/* Bios */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio (English)</label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  rows={6}
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="Brief professional biography"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="fr_bio" className="block text-sm font-medium text-gray-700">Bio (French)</label>
+                <div className="flex gap-2">
+                  <textarea
+                    id="fr_bio"
+                    name="fr_bio"
+                    rows={6}
+                    value={formData.fr_bio}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                  <TranslateButton
+                    type="button"
+                    onClick={() => handleTranslate('bio')}
+                    className="mt-1"
+                  >
+                    Translate
+                  </TranslateButton>
+                </div>
+              </div>
+            </div>
+            
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Profile Image</label>
+              <div 
+                className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                <div className="space-y-1 text-center">
+                  {formData.image_url ? (
+                    <div className="mb-4">
+                      <div className="mx-auto h-32 w-32 rounded-full overflow-hidden bg-gray-100">
+                        <img 
+                          src={formData.image_url} 
+                          alt="Preview" 
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2020.993V24H0v-2.996A14.977%2014.977%200%200112.004%2015c4.904%200%209.26%202.354%2011.996%205.993zM16.002%208.999a4%204%200%2011-8%200%204%204%200%20018%200z%22%20%2F%3E%3C%2Fsvg%3E';
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">{formData.image_url.split('/').pop()}</p>
+                    </div>
+                  ) : (
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  
+                  <div className="flex text-sm text-gray-600">
+                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                      <span>{uploadingImage ? 'Uploading...' : 'Upload a file'}</span>
+                      <input 
+                        id="file-upload" 
+                        name="file-upload" 
+                        type="file" 
+                        className="sr-only"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        ref={fileInputRef}
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                    <p className="pl-1">or drag and drop</p>
+                  </div>
+                  <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                </div>
+              </div>
+              
+              {uploadError && (
+                <p className="mt-2 text-sm text-red-600">{uploadError}</p>
+              )}
+              
+              {formData.image_url && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                    </svg>
+                    {isAutoGeneratedAvatar(formData.image_url) ? 'Use Different Avatar' : 'Remove Image'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
@@ -514,25 +632,17 @@ const TeamPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSaveMember}
-              disabled={savingMember || !formData.name || !formData.title}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={savingMember}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {savingMember ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : selectedMember ? 'Save Changes' : 'Add Team Member'}
+              {savingMember ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
@@ -540,5 +650,26 @@ const TeamPage: React.FC = () => {
     </div>
   );
 };
+
+const TranslateButton = styled.button`
+  background-color: #2196f3;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  height: fit-content;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: #0b7dda;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 export default TeamPage; 

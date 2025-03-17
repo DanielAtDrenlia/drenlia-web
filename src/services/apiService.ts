@@ -10,7 +10,9 @@ const API_BASE_URL = '/api';
 export interface AboutSection {
   about_id: number;
   title: string;
+  fr_title: string | null;
   description: string;
+  fr_description: string | null;
   image_url: string | null;
   display_order: number;
   created_at: string;
@@ -22,7 +24,9 @@ export interface TeamMember {
   team_id: number;
   name: string;
   title: string;
+  fr_title: string | null;
   bio: string | null;
+  fr_bio: string | null;
   image_url: string | null;
   display_order: number;
   created_at: string;
@@ -39,6 +43,10 @@ export interface User {
   google_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TranslationResponse {
+  translation: string;
 }
 
 /**
@@ -441,5 +449,23 @@ export const uploadAboutImage = async (file: File): Promise<{ success: boolean; 
   } catch (error) {
     console.error('Error uploading about image:', error);
     return { success: false };
+  }
+};
+
+export const translateText = async (text: string): Promise<string> => {
+  try {
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    const data = await response.json();
+    return data.translation;
+  } catch (error) {
+    console.error('Translation error:', error);
+    throw new Error('Failed to translate text');
   }
 }; 

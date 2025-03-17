@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import ContactForm from '../components/ContactForm';
 import { useTranslation } from 'react-i18next';
 import { FaMapMarkerAlt } from 'react-icons/fa';
+import { usePreserveScroll } from '../hooks/usePreserveScroll';
 
 const ContactContainer = styled.div`
   max-width: 1200px;
@@ -88,7 +89,8 @@ const InfoText = styled.p`
 `;
 
 const ContactPage: React.FC = () => {
-  const { t } = useTranslation('contact');
+  const { t, i18n } = useTranslation('contact');
+  usePreserveScroll(i18n);
   
   return (
     <ContactContainer>

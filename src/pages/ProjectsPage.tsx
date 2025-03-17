@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import { usePreserveScroll } from '../hooks/usePreserveScroll';
 import CallToAction from '../components/CallToAction';
 import Modal from '../components/Modal';
 
@@ -316,6 +318,9 @@ const GitHubIcon = () => (
 );
 
 const ProjectsPage: React.FC = () => {
+  const { t, i18n } = useTranslation('projects');
+  usePreserveScroll(i18n);
+
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<string>('');
@@ -366,48 +371,44 @@ const ProjectsPage: React.FC = () => {
   const projects = [
     {
       id: 1,
-      title: 'Kanban App',
+      key: 'kanban',
       category: 'web',
       status: 'completed' as const,
-      description: 'A free and open source simple kanban board application for quick task management with drag-and-drop functionality, task assignments, and progress tracking.',
       image: '/images/projects/kanban-app.png',
       link: 'https://github.com/DanielAtDrenlia/easy-kanban',
       demoLink: 'https://kanban.demo.drenlia.com/'
     },
     {
       id: 2,
-      title: 'Team Scheduler App',
+      key: 'teamScheduler',
       category: 'web',
       status: 'completed' as const,
-      description: 'A free and open source collaborative calendar application that allows teams to schedule work shifts, drag and drop schedules, and more. Effortlessly schedule shifts for your team!',
       image: '/images/projects/calendar-app.png',
       link: 'https://github.com/DanielAtDrenlia/teamcal',
       demoLink: 'https://teamcal.demo.drenlia.com/'
     },
     {
       id: 3,
-      title: 'Secure Mail',
+      key: 'secureMail',
       category: 'web',
       status: 'in-progress' as const,
-      description: 'An encrypted email platform with advanced security features, ensuring your communications remain private and protected.',
       image: '/images/projects/secure-mail.png',
       link: '#'
     },
     {
       id: 4,
-      title: 'ClueCam',
+      key: 'clueCam',
       category: 'mobile',
       status: 'in-progress' as const,
-      description: 'A mobile application that uses the camera to locate objects in real-time, perfect for learning and exploring.',
       image: '/images/projects/cluecam.png',
       link: '#'
     }
   ];
   
   const filters = [
-    { id: 'all', label: 'All Projects' },
-    { id: 'web', label: 'Web Development' },
-    { id: 'mobile', label: 'Mobile Apps' }
+    { id: 'all', label: t('filters.all') },
+    { id: 'web', label: t('filters.web') },
+    { id: 'mobile', label: t('filters.mobile') }
   ];
   
   const filteredProjects = activeFilter === 'all' 
@@ -417,9 +418,9 @@ const ProjectsPage: React.FC = () => {
   // Generate random positions for each project card
   const cardPositions = Array(projects.length).fill(0).map((_, index) => getRandomPosition(index));
   
-  const handleImageClick = (imageSrc: string, title: string) => {
+  const handleImageClick = (imageSrc: string, key: string) => {
     setSelectedImage(imageSrc);
-    setSelectedTitle(title);
+    setSelectedTitle(t(`projects.${key}.title`));
   };
   
   const closeModal = () => {
@@ -430,10 +431,9 @@ const ProjectsPage: React.FC = () => {
     <>
       <ProjectsContainer>
         <ProjectsHeader ref={headerRef}>
-          <ProjectsTitle isVisible={headerVisible}>Our Projects</ProjectsTitle>
+          <ProjectsTitle isVisible={headerVisible}>{t('title')}</ProjectsTitle>
           <ProjectsSubtitle isVisible={headerVisible}>
-            Explore our portfolio of innovative digital solutions that have helped some 
-            of our clients achieve their needs.
+            {t('subtitle')}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
@@ -461,19 +461,19 @@ const ProjectsPage: React.FC = () => {
                 y={position.y}
                 rotate={position.rotate}
               >
-                <ProjectImage onClick={() => handleImageClick(project.image, project.title)}>
-                  <img src={project.image} alt={project.title} />
+                <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
+                  <img src={project.image} alt={t(`projects.${project.key}.title`)} />
                 </ProjectImage>
                 <ProjectContent>
                   <ProjectCategory>{filters.find(f => f.id === project.category)?.label}</ProjectCategory>
-                  <ProjectTitle>{project.title}</ProjectTitle>
+                  <ProjectTitle>{t(`projects.${project.key}.title`)}</ProjectTitle>
                   <StatusContainer>
                     <StatusDot status={project.status} />
                     <StatusText>
-                      {project.status === 'completed' ? 'Completed' : 'In Progress'}
+                      {t(`status.${project.status}`)}
                     </StatusText>
                   </StatusContainer>
-                  <ProjectDescription>{project.description}</ProjectDescription>
+                  <ProjectDescription>{t(`projects.${project.key}.description`)}</ProjectDescription>
                   <ProjectLinks>
                     {project.link && project.link.includes('github') && (
                       <GitHubLink href={project.link} target="_blank" rel="noopener noreferrer" title="View on GitHub">
@@ -482,12 +482,12 @@ const ProjectsPage: React.FC = () => {
                     )}
                     {project.link && !project.link.includes('github') && project.link !== '#' && (
                       <ProjectLink href={project.link} target="_blank" rel="noopener noreferrer">
-                        View Project
+                        {t('actions.viewProject')}
                       </ProjectLink>
                     )}
                     {project.demoLink && (
                       <DemoButton href={project.demoLink} target="_blank" rel="noopener noreferrer">
-                        Demo
+                        {t('actions.demo')}
                       </DemoButton>
                     )}
                   </ProjectLinks>

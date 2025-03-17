@@ -329,19 +329,45 @@ const aboutFunctions = {
    * @returns {boolean} True if successful
    */
   updateSection(id, data) {
-    const stmt = getDb().prepare(`
-      UPDATE about 
-      SET title = ?, description = ?, image_url = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE about_id = ?
-    `);
+    // Build the update query dynamically based on provided fields
+    let query = 'UPDATE about SET updated_at = CURRENT_TIMESTAMP';
+    const params = [];
     
-    const info = stmt.run(
-      data.title,
-      data.description,
-      data.image_url,
-      data.display_order || 0,
-      id
-    );
+    if (data.title !== undefined) {
+      query += ', title = ?';
+      params.push(data.title);
+    }
+    
+    if (data.fr_title !== undefined) {
+      query += ', fr_title = ?';
+      params.push(data.fr_title);
+    }
+    
+    if (data.description !== undefined) {
+      query += ', description = ?';
+      params.push(data.description);
+    }
+    
+    if (data.fr_description !== undefined) {
+      query += ', fr_description = ?';
+      params.push(data.fr_description);
+    }
+    
+    if (data.image_url !== undefined) {
+      query += ', image_url = ?';
+      params.push(data.image_url);
+    }
+    
+    if (data.display_order !== undefined) {
+      query += ', display_order = ?';
+      params.push(data.display_order);
+    }
+    
+    query += ' WHERE about_id = ?';
+    params.push(id);
+    
+    const stmt = getDb().prepare(query);
+    const info = stmt.run(...params);
     
     return info.changes > 0;
   },
@@ -353,15 +379,23 @@ const aboutFunctions = {
    */
   createSection(data) {
     const stmt = getDb().prepare(`
-      INSERT INTO about (title, description, image_url, display_order)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO about (
+        title, 
+        fr_title,
+        description, 
+        fr_description,
+        image_url, 
+        display_order
+      ) VALUES (?, ?, ?, ?, ?, ?)
     `);
     
     const info = stmt.run(
       data.title,
+      data.fr_title,
       data.description,
+      data.fr_description,
       data.image_url,
-      data.display_order || 0
+      data.display_order
     );
     
     return info.lastInsertRowid;
@@ -385,37 +419,16 @@ const aboutFunctions = {
    */
   updateSectionOrders(sections) {
     const db = getDb();
+    const stmt = db.prepare('UPDATE about SET display_order = ? WHERE about_id = ?');
     
-    // Begin a transaction
-    const transaction = db.transaction((sections) => {
-      const updateStmt = db.prepare(`
-        UPDATE about 
-        SET display_order = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE about_id = ?
-      `);
-      
-      // Update each section's display_order
+    const updateOrder = db.transaction((sections) => {
       for (const section of sections) {
-        if (!section.about_id || typeof section.display_order !== 'number') {
-          throw new Error('Invalid section data: each section must have about_id and display_order');
-        }
-        
-        const info = updateStmt.run(section.display_order, section.about_id);
-        if (info.changes === 0) {
-          console.warn(`Section with ID ${section.about_id} not found`);
-        }
+        stmt.run(section.display_order, section.about_id);
       }
-      
-      return true;
     });
     
-    // Execute the transaction
-    try {
-      return transaction(sections);
-    } catch (error) {
-      console.error('Transaction failed:', error);
-      return false;
-    }
+    updateOrder(sections);
+    return true;
   }
 };
 
@@ -449,14 +462,16 @@ const teamFunctions = {
   updateMember(id, data) {
     const stmt = getDb().prepare(`
       UPDATE team 
-      SET name = ?, title = ?, bio = ?, image_url = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, title = ?, fr_title = ?, bio = ?, fr_bio = ?, image_url = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
       WHERE team_id = ?
     `);
     
     const info = stmt.run(
       data.name,
       data.title,
+      data.fr_title || null,
       data.bio || null,
+      data.fr_bio || null,
       data.image_url || null,
       data.display_order || 0,
       id
@@ -472,14 +487,16 @@ const teamFunctions = {
    */
   createMember(data) {
     const stmt = getDb().prepare(`
-      INSERT INTO team (name, title, bio, image_url, display_order)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO team (name, title, fr_title, bio, fr_bio, image_url, display_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     const info = stmt.run(
       data.name,
       data.title,
+      data.fr_title || null,
       data.bio || null,
+      data.fr_bio || null,
       data.image_url || null,
       data.display_order || 0
     );

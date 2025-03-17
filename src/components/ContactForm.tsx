@@ -423,52 +423,52 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
     <div>
       <FormCard>
         <FormContainer onSubmit={handleSubmit}>
-          <FormGroup>
+        <FormGroup>
             <Label>{t('form.name.label')}</Label>
-            <Input
-              type="text"
-              value={formData.name}
+          <Input
+            type="text"
+            value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={t('form.name.placeholder')}
-              required
-            />
-          </FormGroup>
-          
-          <FormGroup>
+            required
+          />
+        </FormGroup>
+        
+        <FormGroup>
             <Label>{t('form.email.label')}</Label>
-            <Input
-              type="email"
-              value={formData.email}
+          <Input
+            type="email"
+            value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder={t('form.email.placeholder')}
-              required
-            />
-          </FormGroup>
-          
-          <FormGroup>
+            required
+          />
+        </FormGroup>
+        
+        <FormGroup>
             <Label>{t('form.subject.label')}</Label>
-            <Input
-              type="text"
-              value={formData.subject}
+          <Input
+            type="text"
+            value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
               placeholder={t('form.subject.placeholder')}
               required
-            />
-          </FormGroup>
-          
-          <FormGroup>
+          />
+        </FormGroup>
+        
+        <FormGroup>
             <Label>{t('form.message.label')}</Label>
-            <TextArea
-              value={formData.message}
+          <TextArea
+            value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               placeholder={t('form.message.placeholder')}
-              required
-            />
-          </FormGroup>
-          
+            required
+          />
+        </FormGroup>
+        
           <SubmitButton type="submit" disabled={isSending || !isCaptchaValid}>
             {isSending ? t('form.submit.sending') : t('form.submit.button')}
-          </SubmitButton>
+        </SubmitButton>
           
           {status && (
             <StatusMessage $isError={status.isError}>
@@ -477,7 +477,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
           )}
           
           <ServiceStatus>Email service is available</ServiceStatus>
-        </FormContainer>
+    </FormContainer>
       </FormCard>
       
       {showCaptchaInForm && <Captcha onValidationChange={setIsCaptchaValid} />}
