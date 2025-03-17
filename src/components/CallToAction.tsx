@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const CTAContainer = styled.section`
   padding: 5rem 0;
@@ -60,16 +61,17 @@ const CTAButton = styled(Link)`
 
 const CallToAction: React.FC = () => {
   const { t, i18n } = useTranslation('home');
+  const translate = t as TFunction<'home', undefined>;
   
   return (
     <CTAContainer>
       <CTAContent>
-        <CTATitle>{t('cta.title', 'Ready to Transform Your Digital Presence?')}</CTATitle>
+        <CTATitle>{translate('cta.title', 'Ready to Transform Your Digital Presence?')}</CTATitle>
         <CTAText>
-          {t('cta.description', 'Let\'s discuss how we can help you achieve your goals and take your business to the next level.')}
+          {translate('cta.description', 'Let\'s discuss how we can help you achieve your goals and take your business to the next level.')}
         </CTAText>
         <CTAButton to={`/${i18n.language}/contact`}>
-          {t('cta.button', 'Get Started')}
+          {translate('cta.button', 'Get Started')}
         </CTAButton>
       </CTAContent>
     </CTAContainer>

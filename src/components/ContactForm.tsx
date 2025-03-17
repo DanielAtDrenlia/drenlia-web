@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { API_URL } from '../services/emailService';
 
 const FormCard = styled.div`
@@ -215,6 +216,7 @@ const CaptchaStatus = styled.div<{ $isValid: boolean | null }>`
 // Captcha Component
 const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({ onValidationChange }) => {
   const { t } = useTranslation('contact');
+  const translate = t as TFunction<'contact', undefined>;
   const [captchaImage, setCaptchaImage] = useState<string>('');
   const [captchaInput, setCaptchaInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -240,18 +242,18 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
           setErrorMessage('');
           onValidationChange(false);
         } else {
-          setErrorMessage(t('captcha.error'));
+          setErrorMessage(translate('captcha.error', 'Error loading captcha'));
         }
       } else {
-        setErrorMessage(t('captcha.error'));
+        setErrorMessage(translate('captcha.error', 'Error loading captcha'));
       }
     } catch (error) {
       console.error('Captcha loading error:', error);
-      setErrorMessage(t('captcha.error'));
+      setErrorMessage(translate('captcha.error', 'Error loading captcha'));
     } finally {
       setIsLoading(false);
     }
-  }, [isValid, onValidationChange, t]);
+  }, [isValid, onValidationChange, translate]);
   
   React.useEffect(() => {
     loadCaptcha();
@@ -271,7 +273,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
       
       const result = await response.json();
       setIsValid(result.success);
-      setErrorMessage(result.success ? '' : t('captcha.invalid'));
+      setErrorMessage(result.success ? '' : translate('captcha.invalid'));
       onValidationChange(result.success);
       
       if (!result.success) {
@@ -280,7 +282,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
     } catch (error) {
       console.error('Verification error:', error);
       setIsValid(false);
-      setErrorMessage(t('captcha.error'));
+      setErrorMessage(translate('captcha.error', 'Error verifying captcha'));
       onValidationChange(false);
     } finally {
       setIsVerifying(false);
@@ -289,10 +291,10 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
   
   return (
     <CaptchaCard>
-      <CaptchaTitle>{t('captcha.title')}</CaptchaTitle>
+      <CaptchaTitle>{translate('captcha.title')}</CaptchaTitle>
       
       <CaptchaImageContainer>
-        {isLoading && <CaptchaLoading>{t('captcha.loading')}</CaptchaLoading>}
+        {isLoading && <CaptchaLoading>{translate('captcha.loading')}</CaptchaLoading>}
         {!isLoading && captchaImage && (
           <img 
             src={captchaImage} 
@@ -307,7 +309,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
         value={captchaInput}
         onChange={(e) => setCaptchaInput(e.target.value)}
         onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-        placeholder={t('captcha.placeholder')}
+        placeholder={translate('captcha.placeholder')}
         disabled={isValid === true}
       />
       
@@ -323,7 +325,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
             <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
           </svg>
-          {t('captcha.refresh')}
+          {translate('captcha.refresh')}
         </RefreshButton>
         
         <VerifyButton 
@@ -331,7 +333,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
           onClick={handleVerify}
           disabled={isVerifying || !captchaInput.trim() || isValid === true}
         >
-          {isVerifying ? t('captcha.verifying') : isValid === true ? t('captcha.valid') : t('captcha.verify')}
+          {isVerifying ? translate('captcha.verifying') : isValid === true ? translate('captcha.valid') : translate('captcha.verify')}
         </VerifyButton>
       </ButtonsContainer>
       
@@ -343,7 +345,7 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
-              {t('captcha.valid')}
+              {translate('captcha.valid')}
             </>
           ) : (
             errorMessage
@@ -361,6 +363,7 @@ interface ContactFormProps {
 
 const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, showCaptchaInForm = true }) => {
   const { t } = useTranslation('contact');
+  const translate = t as TFunction<'contact', undefined>;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -376,7 +379,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
     
     if (!isCaptchaValid) {
       setStatus({
-        message: t('captcha.error'),
+        message: translate('captcha.error', 'Please complete the captcha'),
         isError: true
       });
       return;
@@ -395,19 +398,19 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
       
       if (response.ok) {
         setStatus({
-          message: t('form.status.success'),
+          message: translate('form.status.success'),
           isError: false
         });
         setFormData({ name: '', email: '', subject: '', message: '' });
       } else {
         setStatus({
-          message: t('form.status.error'),
+          message: translate('form.status.error'),
           isError: true
         });
       }
     } catch (error) {
       setStatus({
-        message: t('form.status.error'),
+        message: translate('form.status.error'),
         isError: true
       });
     } finally {
@@ -424,50 +427,50 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
       <FormCard>
         <FormContainer onSubmit={handleSubmit}>
         <FormGroup>
-            <Label>{t('form.name.label')}</Label>
+            <Label>{translate('form.name.label')}</Label>
           <Input
             type="text"
             value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={t('form.name.placeholder')}
+              placeholder={translate('form.name.placeholder')}
             required
           />
         </FormGroup>
         
         <FormGroup>
-            <Label>{t('form.email.label')}</Label>
+            <Label>{translate('form.email.label')}</Label>
           <Input
             type="email"
             value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={t('form.email.placeholder')}
+              placeholder={translate('form.email.placeholder')}
             required
           />
         </FormGroup>
         
         <FormGroup>
-            <Label>{t('form.subject.label')}</Label>
+            <Label>{translate('form.subject.label')}</Label>
           <Input
             type="text"
             value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              placeholder={t('form.subject.placeholder')}
+              placeholder={translate('form.subject.placeholder')}
               required
           />
         </FormGroup>
         
         <FormGroup>
-            <Label>{t('form.message.label')}</Label>
+            <Label>{translate('form.message.label')}</Label>
           <TextArea
             value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder={t('form.message.placeholder')}
+              placeholder={translate('form.message.placeholder')}
             required
           />
         </FormGroup>
         
           <SubmitButton type="submit" disabled={isSending || !isCaptchaValid}>
-            {isSending ? t('form.submit.sending') : t('form.submit.button')}
+            {isSending ? translate('form.submit.sending') : translate('form.submit.button')}
         </SubmitButton>
           
           {status && (

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import type { i18n } from 'i18next';
 import { usePreserveScroll } from '../hooks/usePreserveScroll';
 import CallToAction from '../components/CallToAction';
 import Modal from '../components/Modal';
@@ -310,20 +312,14 @@ const ProjectLink = styled.a`
   }
 `;
 
-// GitHub logo SVG component
-const GitHubIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-  </svg>
-);
-
 const ProjectsPage: React.FC = () => {
   const { t, i18n } = useTranslation('projects');
-  usePreserveScroll(i18n);
+  const translate = t as TFunction<'projects', undefined>;
+  usePreserveScroll(i18n as i18n);
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string>('');
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
   const [projectsVisible, setProjectsVisible] = useState(false);
   
@@ -406,9 +402,9 @@ const ProjectsPage: React.FC = () => {
   ];
   
   const filters = [
-    { id: 'all', label: t('filters.all') },
-    { id: 'web', label: t('filters.web') },
-    { id: 'mobile', label: t('filters.mobile') }
+    { id: 'all', label: translate('filters.all', 'All') },
+    { id: 'web', label: translate('filters.web', 'Web') },
+    { id: 'mobile', label: translate('filters.mobile', 'Mobile') }
   ];
   
   const filteredProjects = activeFilter === 'all' 
@@ -420,7 +416,7 @@ const ProjectsPage: React.FC = () => {
   
   const handleImageClick = (imageSrc: string, key: string) => {
     setSelectedImage(imageSrc);
-    setSelectedTitle(t(`projects.${key}.title`));
+    setSelectedTitle(translate(`projects.${key}.title`, ''));
   };
   
   const closeModal = () => {
@@ -431,9 +427,9 @@ const ProjectsPage: React.FC = () => {
     <>
       <ProjectsContainer>
         <ProjectsHeader ref={headerRef}>
-          <ProjectsTitle isVisible={headerVisible}>{t('title')}</ProjectsTitle>
+          <ProjectsTitle isVisible={headerVisible}>{translate('title', 'Our Projects')}</ProjectsTitle>
           <ProjectsSubtitle isVisible={headerVisible}>
-            {t('subtitle')}
+            {translate('subtitle', 'Explore our portfolio of innovative solutions and successful implementations.')}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
@@ -462,32 +458,35 @@ const ProjectsPage: React.FC = () => {
                 rotate={position.rotate}
               >
                 <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
-                  <img src={project.image} alt={t(`projects.${project.key}.title`)} />
+                  <img src={project.image} alt={translate(`projects.${project.key}.title`, '')} />
                 </ProjectImage>
                 <ProjectContent>
                   <ProjectCategory>{filters.find(f => f.id === project.category)?.label}</ProjectCategory>
-                  <ProjectTitle>{t(`projects.${project.key}.title`)}</ProjectTitle>
+                  <ProjectTitle>{translate(`projects.${project.key}.title`, '')}</ProjectTitle>
                   <StatusContainer>
                     <StatusDot status={project.status} />
                     <StatusText>
-                      {t(`status.${project.status}`)}
+                      {translate(`status.${project.status}`, '')}
                     </StatusText>
                   </StatusContainer>
-                  <ProjectDescription>{t(`projects.${project.key}.description`)}</ProjectDescription>
+                  <ProjectDescription>{translate(`projects.${project.key}.description`, '')}</ProjectDescription>
                   <ProjectLinks>
                     {project.link && project.link.includes('github') && (
                       <GitHubLink href={project.link} target="_blank" rel="noopener noreferrer" title="View on GitHub">
-                        <GitHubIcon />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                        </svg>
+                        {translate('actions.viewOnGitHub', 'View on GitHub')}
                       </GitHubLink>
                     )}
                     {project.link && !project.link.includes('github') && project.link !== '#' && (
                       <ProjectLink href={project.link} target="_blank" rel="noopener noreferrer">
-                        {t('actions.viewProject')}
+                        {translate('actions.viewProject', 'View Project')}
                       </ProjectLink>
                     )}
                     {project.demoLink && (
                       <DemoButton href={project.demoLink} target="_blank" rel="noopener noreferrer">
-                        {t('actions.demo')}
+                        {translate('actions.demo', 'Live Demo')}
                       </DemoButton>
                     )}
                   </ProjectLinks>
@@ -499,7 +498,7 @@ const ProjectsPage: React.FC = () => {
       </ProjectsContainer>
       
       <Modal isOpen={!!selectedImage} onClose={closeModal}>
-        <ModalImage src={selectedImage || ''} alt={selectedTitle} />
+        <ModalImage src={selectedImage || ''} alt={translate(`projects.${selectedTitle}.title`, '')} />
       </Modal>
       
       <CallToAction />
