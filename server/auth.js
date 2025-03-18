@@ -60,8 +60,17 @@ function isAdmin(req, res, next) {
   res.status(403).json({ success: false, message: 'Not authorized' });
 }
 
+// Middleware to check if user is authenticated and either admin or has matching email
+function isAuthenticatedOrAdmin(req, res, next) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+  next();
+}
+
 module.exports = {
   passport,
   isAuthenticated,
-  isAdmin
+  isAdmin,
+  isAuthenticatedOrAdmin
 }; 

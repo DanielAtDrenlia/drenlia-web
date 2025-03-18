@@ -51,6 +51,7 @@ interface SortableItemProps {
   uploadError: string | null;
   fileInputRef: RefObject<HTMLInputElement>;
   handleTranslate: (field: 'title' | 'description') => Promise<void>;
+  isAdmin: boolean;
 }
 
 const SortableItem: React.FC<SortableItemProps> = ({ 
@@ -71,7 +72,8 @@ const SortableItem: React.FC<SortableItemProps> = ({
   uploadingImage,
   uploadError,
   fileInputRef,
-  handleTranslate
+  handleTranslate,
+  isAdmin
 }) => {
   const {
     attributes,
@@ -284,11 +286,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
           <div className="px-6 py-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div {...attributes} {...listeners} className="cursor-move mr-2 text-gray-400 hover:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                  </svg>
-                </div>
+                {isAdmin && (
+                  <div {...attributes} {...listeners} className="cursor-move mr-2 text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                    </svg>
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">{section.title}</h3>
                   {section.fr_title && (
@@ -303,27 +307,31 @@ const SortableItem: React.FC<SortableItemProps> = ({
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                   Order: {section.display_order}
                 </span>
-                <button
-                  onClick={() => handleEditSection(section)}
-                  className="inline-flex items-center p-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                </button>
-                <button
-                  onClick={() => handleDeleteSection(section.about_id)}
-                  disabled={savingId === section.about_id}
-                  className="inline-flex items-center p-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                    <path d="M10 11v6"></path>
-                    <path d="M14 11v6"></path>
-                  </svg>
-                </button>
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={() => handleEditSection(section)}
+                      className="inline-flex items-center p-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSection(section.about_id)}
+                      disabled={savingId === section.about_id}
+                      className="inline-flex items-center p-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <div className="mt-4">
@@ -385,18 +393,19 @@ const SortableItem: React.FC<SortableItemProps> = ({
  */
 const AboutPage: React.FC = () => {
   const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
   const [sections, setSections] = useState<AboutSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [savingId, setSavingId] = useState<number | string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState<AboutSectionForm>({
     title: '',
     fr_title: '',
     description: '',
     fr_description: '',
-    display_order: 1,
+    display_order: 0,
     image_url: ''
   });
 
@@ -449,14 +458,17 @@ const AboutPage: React.FC = () => {
   useEffect(() => {
     const fetchSections = async () => {
       try {
-        setLoading(true);
-        const data = await getAboutSections();
-        // Sort sections by display_order
-        const sortedSections = [...data].sort((a, b) => a.display_order - b.display_order);
-        setSections(sortedSections as AboutSection[]);
+        const sections = await getAboutSections();
+        if (sections && sections.length >= 0) {
+          // Sort sections by display_order
+          const sortedSections = [...sections].sort((a, b) => a.display_order - b.display_order);
+          setSections(sortedSections);
+        } else {
+          setError('Failed to fetch about sections');
+        }
       } catch (err) {
         console.error('Error fetching about sections:', err);
-        setError('Failed to load about sections. Please try again later.');
+        setError('An error occurred while fetching about sections');
       } finally {
         setLoading(false);
       }
@@ -481,7 +493,6 @@ const AboutPage: React.FC = () => {
   // Handle cancel edit
   const handleCancelEdit = () => {
     setEditingSectionId(null);
-    setIsCreatingNew(false);
     setFormData({
       title: '',
       fr_title: '',
@@ -536,62 +547,6 @@ const AboutPage: React.FC = () => {
     } catch (error) {
       console.error('Error saving section:', error);
       setError('Failed to save section. Please try again.');
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  // Handle add new section
-  const handleAddSection = () => {
-    setIsCreatingNew(true);
-    setFormData({
-      title: '',
-      fr_title: '',
-      description: '',
-      fr_description: '',
-      display_order: sections.length > 0 ? Math.max(...sections.map(s => s.display_order)) + 1 : 1,
-      image_url: ''
-    });
-  };
-
-  // Handle create new section
-  const handleCreateSection = async () => {
-    try {
-      setSavingId('new');
-      const newSection = {
-        title: formData.title.trim(),
-        fr_title: formData.fr_title.trim() || null,  // Set to null if empty or whitespace
-        description: formData.description.trim(),
-        fr_description: formData.fr_description.trim() || null,  // Set to null if empty or whitespace
-        image_url: formData.image_url || null,  // Set to null if empty
-        display_order: formData.display_order
-      };
-
-      const result = await createAboutSection(newSection);
-      
-      if (result.success) {
-        // Refresh the sections list
-        const updatedSections = await getAboutSections();
-        // Sort sections by display_order
-        const sortedSections = [...updatedSections].sort((a, b) => a.display_order - b.display_order);
-        setSections(sortedSections as AboutSection[]);
-        
-        // Reset creating state
-        setIsCreatingNew(false);
-        setFormData({
-          title: '',
-          fr_title: '',
-          description: '',
-          fr_description: '',
-          display_order: 0,
-          image_url: ''
-        });
-      } else {
-        setError('Failed to create section. Please try again.');
-      }
-    } catch (err) {
-      console.error('Error creating section:', err);
-      setError('Failed to create section. Please try again.');
     } finally {
       setSavingId(null);
     }
@@ -721,6 +676,46 @@ const AboutPage: React.FC = () => {
     }
   };
 
+  // Handle create section
+  const handleCreateSection = async () => {
+    try {
+      setSavingId('new');
+      const sectionToCreate = {
+        title: formData.title.trim(),
+        fr_title: formData.fr_title.trim() || null,  // Set to null if empty or whitespace
+        description: formData.description.trim(),
+        fr_description: formData.fr_description.trim() || null,  // Set to null if empty or whitespace
+        image_url: formData.image_url || null,  // Set to null if empty
+        display_order: sections.length + 1  // Add to the end of the list
+      };
+
+      const success = await createAboutSection(sectionToCreate);
+      if (success) {
+        // Refresh the sections list
+        const updatedSections = await getAboutSections();
+        // Sort sections by display_order
+        const sortedSections = [...updatedSections].sort((a, b) => a.display_order - b.display_order);
+        setSections(sortedSections);
+        
+        // Reset form and hide it
+        setShowAddForm(false);
+        setFormData({
+          title: '',
+          fr_title: '',
+          description: '',
+          fr_description: '',
+          display_order: 0,
+          image_url: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating section:', error);
+      setError('Failed to create section. Please try again.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -731,18 +726,21 @@ const AboutPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">About Sections</h1>
           <p className="mt-1 text-gray-600">
             Manage the content sections that appear on the About page
+            {!isAdmin && " (View Only)"}
           </p>
         </div>
-        <button
-          onClick={handleAddSection}
-          disabled={isCreatingNew}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Section
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            disabled={showAddForm}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Section
+          </button>
+        )}
       </div>
 
       {error && (
@@ -764,7 +762,7 @@ const AboutPage: React.FC = () => {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-      ) : sections.length === 0 && !isCreatingNew ? (
+      ) : sections.length === 0 && !showAddForm ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
           <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"></path>
@@ -772,22 +770,24 @@ const AboutPage: React.FC = () => {
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No sections</h3>
           <p className="mt-1 text-sm text-gray-500">Get started by creating a new section.</p>
-          <div className="mt-6">
-            <button
-              onClick={handleAddSection}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New Section
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="mt-6">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                New Section
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
           {/* New Section Form */}
-          {isCreatingNew && (
+          {showAddForm && isAdmin && (
             <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Section</h3>
               <div className="space-y-4">
@@ -863,7 +863,40 @@ const AboutPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                {/* ... rest of the form fields ... */}
+                <div>
+                  <label htmlFor="new-image" className="block text-sm font-medium text-gray-700">Image URL</label>
+                  <input
+                    type="text"
+                    name="image_url"
+                    id="new-image"
+                    value={formData.image_url}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowAddForm(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateSection}
+                    disabled={savingId === 'new'}
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingId === 'new' ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating...
+                      </>
+                    ) : 'Save Section'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -900,6 +933,7 @@ const AboutPage: React.FC = () => {
                     uploadError={uploadError}
                     fileInputRef={fileInputRef}
                     handleTranslate={handleTranslate}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>

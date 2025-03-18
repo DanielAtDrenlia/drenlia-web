@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../services/settingsService';
 import TranslationsTab from '../../components/admin/TranslationsTab';
+import { useAuth } from '../../context/AuthContext';
 
 export interface Setting {
   key: string;
@@ -10,11 +11,14 @@ export interface Setting {
 
 const SettingsPage: React.FC = () => {
   const { settings, isLoading, error, updateSetting } = useSettings();
+  const { user } = useAuth();
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [newSetting, setNewSetting] = useState({ key: '', value: '' });
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'translations'>('general');
+
+  const isAdmin = user?.isAdmin || false;
 
   if (isLoading) {
     return (
@@ -130,7 +134,12 @@ const SettingsPage: React.FC = () => {
       {activeTab === 'general' ? (
         <>
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+              {!isAdmin && (
+                <p className="mt-1 text-sm text-gray-500">View-only mode. Contact an administrator to make changes.</p>
+              )}
+            </div>
             {successMessage && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
                 <p className="text-green-600">{successMessage}</p>
@@ -138,53 +147,55 @@ const SettingsPage: React.FC = () => {
             )}
           </div>
 
-          {/* New Setting Form */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-gray-900">Add New Setting</h2>
-              <button
-                onClick={() => setIsAddingNew(!isAddingNew)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                {isAddingNew ? 'Cancel' : 'Add New Setting'}
-              </button>
-            </div>
-
-            {isAddingNew && (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="new-key" className="block text-sm font-medium text-gray-700">
-                    Key
-                  </label>
-                  <input
-                    type="text"
-                    id="new-key"
-                    value={newSetting.key}
-                    onChange={(e) => setNewSetting(prev => ({ ...prev, key: e.target.value }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="new-value" className="block text-sm font-medium text-gray-700">
-                    Value
-                  </label>
-                  <input
-                    type="text"
-                    id="new-value"
-                    value={newSetting.value}
-                    onChange={(e) => setNewSetting(prev => ({ ...prev, value: e.target.value }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
+          {/* New Setting Form - Only visible to admins */}
+          {isAdmin && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Add New Setting</h2>
                 <button
-                  onClick={handleAddNew}
+                  onClick={() => setIsAddingNew(!isAddingNew)}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  Add Setting
+                  {isAddingNew ? 'Cancel' : 'Add New Setting'}
                 </button>
               </div>
-            )}
-          </div>
+
+              {isAddingNew && (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="new-key" className="block text-sm font-medium text-gray-700">
+                      Key
+                    </label>
+                    <input
+                      type="text"
+                      id="new-key"
+                      value={newSetting.key}
+                      onChange={(e) => setNewSetting(prev => ({ ...prev, key: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="new-value" className="block text-sm font-medium text-gray-700">
+                      Value
+                    </label>
+                    <input
+                      type="text"
+                      id="new-value"
+                      value={newSetting.value}
+                      onChange={(e) => setNewSetting(prev => ({ ...prev, value: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddNew}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Add Setting
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Settings List */}
           <div className="bg-white shadow rounded-lg">
@@ -204,9 +215,11 @@ const SettingsPage: React.FC = () => {
                     <th scope="col" className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Last Updated
                     </th>
-                    <th scope="col" className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {isAdmin && (
+                      <th scope="col" className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -216,51 +229,54 @@ const SettingsPage: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900">{key}</div>
                       </td>
                       <td className="w-3/6 px-6 py-4">
-                        <input
-                          type="text"
-                          value={value}
-                          onChange={(e) => handleSettingChange(key, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        />
+                        {isAdmin ? (
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => handleSettingChange(key, e.target.value)}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-900">{value}</div>
+                        )}
                       </td>
                       <td className="w-1/6 px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(settings?.find(s => s.key === key)?.updated_at || '').toLocaleString()}
                       </td>
-                      <td className="w-1/6 px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleDelete(key)}
-                          className="inline-flex items-center p-2 border border-transparent rounded-md text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </td>
+                      {isAdmin && (
+                        <td className="w-1/6 px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => handleDelete(key)}
+                            className="inline-flex items-center p-2 border border-transparent rounded-md text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+
+          {/* Save All Button - Only visible to admins */}
+          {isAdmin && Object.keys(editedSettings).length > 0 && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleSaveAll}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Save All Changes
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <TranslationsTab />
       )}
-
-      {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex justify-end">
-          <button
-            onClick={handleSaveAll}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Save All Changes
-          </button>
-        </div>
-      </div>
-
-      {/* Add padding to prevent content from being hidden behind the footer */}
-      <div className="h-16"></div>
     </div>
   );
 };

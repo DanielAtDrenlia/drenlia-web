@@ -17,10 +17,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requireAdmin = false, c
   const location = useLocation();
 
   // Force a check of authentication status when the component mounts
-  // This is important for handling redirects from the server
   useEffect(() => {
     console.log('ProtectedRoute: Checking auth status');
-    // Only check auth status if not already authenticated
     if (!isAuthenticated && !isLoading) {
       checkAuthStatus();
     }
@@ -44,13 +42,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requireAdmin = false, c
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     console.log('ProtectedRoute: Not authenticated, redirecting to login');
-    return <Navigate to="/admin/login" replace />;
+    // Encode the current path to handle special characters
+    const returnTo = encodeURIComponent(location.pathname + location.search);
+    console.log('ProtectedRoute: Redirecting to login with returnTo:', returnTo);
+    // Redirect to login with return URL
+    window.location.href = `/admin/login?returnTo=${returnTo}`;
+    return null;
   }
 
-  // Redirect to home if not an admin (when requireAdmin is true)
+  // Only check admin requirement for specific admin-only routes
   if (requireAdmin && !user?.isAdmin) {
-    console.log('ProtectedRoute: Not admin, redirecting to home');
-    return <Navigate to="/" replace />;
+    const path = location.pathname;
+    // List of admin-only routes
+    const adminOnlyRoutes = ['/admin/users', '/admin/settings'];
+    
+    if (adminOnlyRoutes.some(route => path.startsWith(route))) {
+      console.log('ProtectedRoute: Admin-only route access denied');
+      return <Navigate to="/admin" replace />;
+    }
   }
 
   // Render the protected content

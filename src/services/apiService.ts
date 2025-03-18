@@ -28,6 +28,7 @@ export interface TeamMember {
   bio: string | null;
   fr_bio: string | null;
   image_url: string | null;
+  email: string | null;
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -448,6 +449,33 @@ export const uploadAboutImage = async (file: File): Promise<{ success: boolean; 
     return await response.json();
   } catch (error) {
     console.error('Error uploading about image:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Upload an image for a team member
+ * @param file The image file to upload
+ * @returns Promise with upload result
+ */
+export const uploadTeamImage = async (file: File): Promise<{ success: boolean; imagePath?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/admin/upload/team-image`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading team image:', error);
     return { success: false };
   }
 };

@@ -52,13 +52,13 @@ function App() {
             {/* Admin routes (no language prefix needed) */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             
-            <Route path="/admin" element={<ProtectedRoute requireAdmin={true} />}>
+            <Route path="/admin" element={<ProtectedRoute requireAdmin={false} />}>
               <Route element={<AdminDashboardPage />}>
                 <Route index element={<AdminHomePage />} />
                 <Route path="about" element={<AdminAboutPage />} />
                 <Route path="team" element={<AdminTeamPage />} />
-                <Route path="users" element={<AdminUsersPage />} />
-                <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="users" element={<ProtectedRoute requireAdmin={true}><AdminUsersPage /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute requireAdmin={false}><AdminSettingsPage /></ProtectedRoute>} />
               </Route>
             </Route>
 

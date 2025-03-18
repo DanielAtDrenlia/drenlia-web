@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useTranslations, TranslationPair } from '../../services/translationService';
+import { useAuth } from '../../context/AuthContext';
 
 interface TranslationFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onChange }) => (
+const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onChange, disabled }) => (
   <div className="mb-4">
     <label className="block text-sm font-medium text-gray-700 mb-1">
       {label}
@@ -16,7 +18,8 @@ const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onCha
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      disabled={disabled}
+      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
     />
   </div>
 );
@@ -24,9 +27,10 @@ const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onCha
 interface TranslationCardProps {
   pair: TranslationPair;
   onSave: (locale: 'en' | 'fr', filename: string, content: Record<string, any>) => Promise<void>;
+  isAdmin: boolean;
 }
 
-const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
+const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave, isAdmin }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -75,6 +79,7 @@ const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
   };
 
   const handleTranslate = async () => {
+    if (!isAdmin) return;
     try {
       setIsTranslating(true);
       const translatedContent = await translateObject(editedContent.en);
@@ -94,6 +99,7 @@ const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
   };
 
   const handleSave = async () => {
+    if (!isAdmin) return;
     try {
       setIsSaving(true);
       // Save both English and French translations
@@ -131,7 +137,9 @@ const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
           key={key}
           label={fieldLabel}
           value={value as string}
+          disabled={!isAdmin}
           onChange={(newValue) => {
+            if (!isAdmin) return;
             setEditedContent(prev => {
               const newContent = { ...prev };
               let current = newContent[locale];
@@ -151,27 +159,35 @@ const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900">{pair.en.name}</h2>
-        <div className="space-x-4">
-          <button
-            onClick={handleTranslate}
-            disabled={isTranslating}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-          >
-            {isTranslating ? 'Translating...' : 'Translate to French'}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="space-x-4">
+            <button
+              onClick={handleTranslate}
+              disabled={isTranslating || !isAdmin}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+            >
+              {isTranslating ? 'Translating...' : 'Translate to French'}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !isAdmin}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
       </div>
 
       {successMessage && (
         <div className="mb-4 p-4 rounded-md bg-green-50 border border-green-200">
           <p className="text-green-600">{successMessage}</p>
+        </div>
+      )}
+
+      {!isAdmin && (
+        <div className="mb-4 p-4 rounded-md bg-gray-50 border border-gray-200">
+          <p className="text-gray-600">View-only mode. Contact an administrator to make changes.</p>
         </div>
       )}
 
@@ -191,6 +207,8 @@ const TranslationCard: React.FC<TranslationCardProps> = ({ pair, onSave }) => {
 
 const TranslationsTab: React.FC = () => {
   const { translations, isLoading, error, updateTranslation } = useTranslations();
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
 
   if (isLoading) {
     return (
@@ -215,6 +233,7 @@ const TranslationsTab: React.FC = () => {
           key={pair.en.name}
           pair={pair}
           onSave={updateTranslation}
+          isAdmin={isAdmin}
         />
       ))}
     </div>

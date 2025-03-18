@@ -5,6 +5,7 @@
 
 const Database = require('better-sqlite3');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 // Database file path
 const DB_PATH = path.join(__dirname, 'database.sqlite');
@@ -142,28 +143,32 @@ const userFunctions = {
    * @param {Object} userData - The user data
    * @returns {number} The new user ID
    */
-  createUser(userData) {
-    const { first_name, last_name, email, admin } = userData;
-    
-    // Check if user with this email already exists
-    const existingUser = this.getUserByEmail(email);
-    if (existingUser) {
-      throw new Error('User with this email already exists');
-    }
-    
-    const stmt = getDb().prepare(`
-      INSERT INTO users (first_name, last_name, email, admin)
-      VALUES (?, ?, ?, ?)
+  createUser({ first_name, last_name, email, admin, password_hash }) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO users (
+        first_name, 
+        last_name, 
+        email, 
+        admin, 
+        password_hash,
+        created_at, 
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
-    
+
     const info = stmt.run(
       first_name,
       last_name,
       email,
-      admin ? 1 : 0
+      admin ? 1 : 0,
+      password_hash
     );
-    
-    return info.lastInsertRowid;
+
+    return {
+      id: info.lastInsertRowid,
+      success: true
+    };
   },
 
   /**
@@ -257,6 +262,15 @@ const userFunctions = {
     const info = stmt.run(adminStatus ? 1 : 0, id);
     
     return info.changes > 0;
+  },
+
+  // Add a function to verify passwords for local accounts
+  verifyPassword(email, password) {
+    const user = this.getUserByEmail(email);
+    if (!user || !user.password_hash) {
+      return false;
+    }
+    return bcrypt.compareSync(password, user.password_hash);
   }
 };
 
