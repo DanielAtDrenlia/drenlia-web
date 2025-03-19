@@ -1,0 +1,73 @@
+{
+  "title": "Contactez-nous",
+  "subtitle": "Vous avez une question ? Nous aimerions vous entendre.",
+  "form": {
+    "name": {
+      "label": "Nom",
+      "placeholder": "Votre nom"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "Votre adresse email"
+    },
+    "subject": {
+      "label": "Sujet",
+      "placeholder": "De quoi s'agit-il ?"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Votre message"
+    },
+    "submit": {
+      "button": "Envoyer",
+      "sending": "Envoi en cours..."
+    },
+    "status": {
+      "success": "Merci ! Votre message a été envoyé.",
+      "error": "Désolé, une erreur s'est produite. Veuillez réessayer."
+    },
+    "service": {
+      "available": "Le service d'email est disponible"
+    },
+    "error": {
+      "name": "Veuillez entrer votre nom",
+      "email": "Veuillez entrer une adresse email valide",
+      "message": "Veuillez entrer votre message",
+      "captcha": "Veuillez compléter la vérification du captcha",
+      "submit": "Échec de l'envoi du message. Veuillez réessayer.",
+      "success": "Message envoyé avec succès !",
+      "invalidEmail": "Veuillez entrer une adresse email valide"
+    }
+  },
+  "location": {
+    "title": "Notre adresse",
+    "address": "7037, rue des Tournesols\nSaint-Hubert, QC\nJ3Y 8S2\nCanada"
+  },
+  "phone": {
+    "title": "Téléphone",
+    "number": "+1 (438) 123-4567"
+  },
+  "email": {
+    "title": "Email"
+  },
+  "hours": {
+    "title": "Heures d'ouverture",
+    "weekdays": "Lundi - Vendredi : 9h00 - 18h00",
+    "weekends": "Samedi - Dimanche : Fermé"
+  },
+  "captcha": {
+    "title": "Veuillez vérifier que vous êtes humain",
+    "placeholder": "Entrez le texte de l'image",
+    "refresh": "Actualiser le captcha",
+    "verify": "Vérifier",
+    "loading": "Chargement du captcha...",
+    "valid": "Vérification réussie",
+    "invalid": "Code incorrect, veuillez réessayer",
+    "error": "Erreur de chargement du captcha. Veuillez réessayer.",
+    "alt": "Image CAPTCHA",
+    "verifying": "Vérification en cours...",
+    "error": {
+      "load": "Échec du chargement du captcha"
+    }
+  }
+} 

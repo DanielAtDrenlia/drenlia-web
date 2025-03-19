@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const FeaturesContainer = styled.section`
   padding: 5rem 0;
@@ -228,7 +230,18 @@ const LinuxIcon = () => (
   </svg>
 );
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'services', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'services', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const Features: React.FC = () => {
+  const { t } = useTranslation('services');
   const [isVisible, setIsVisible] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
   
@@ -236,41 +249,22 @@ const Features: React.FC = () => {
   const cardPositions = Array(6).fill(0).map((_, index) => getRandomPosition(index));
   
   useEffect(() => {
-    // Handle direct navigation to #services-section
-    if (window.location.hash === '#services-section') {
-      setTimeout(() => {
-        const servicesSection = document.getElementById('services-section');
-        if (servicesSection) {
-          servicesSection.scrollIntoView({ behavior: 'smooth' });
-          setIsVisible(true);
-        }
-      }, 100);
-    }
-    
-    // Check if we should scroll to services from sessionStorage
-    if (sessionStorage.getItem('scrollToServices') === 'true') {
-      sessionStorage.removeItem('scrollToServices');
-      setTimeout(() => {
-        const servicesSection = document.getElementById('services-section');
-        if (servicesSection) {
-          servicesSection.scrollIntoView({ behavior: 'smooth' });
-          setIsVisible(true);
-        }
-      }, 100);
-    }
-    
+    // Set up intersection observer
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When the section is 20% visible, trigger the animation
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
+        // Only set visible if the section is significantly in view
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+          // Add a small delay to ensure smooth scrolling has completed
+          setTimeout(() => {
+            setIsVisible(true);
+          }, 100);
+        } else {
+          setIsVisible(false);
         }
       },
       {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.2,
+        threshold: [0.3], // Require 30% of the section to be visible
+        rootMargin: '-10% 0px' // Trigger slightly after entering viewport
       }
     );
     
@@ -278,89 +272,93 @@ const Features: React.FC = () => {
       observer.observe(featuresRef.current);
     }
     
-    // Handle scroll events to the services section
-    const handleScrollToServices = () => {
-      const hash = window.location.hash;
-      if (hash === '#services-section') {
-        setTimeout(() => {
-          const servicesSection = document.getElementById('services-section');
-          if (servicesSection) {
-            servicesSection.scrollIntoView({ behavior: 'smooth' });
-            setIsVisible(true);
-          }
-        }, 100);
-      }
-    };
-    
-    window.addEventListener('hashchange', handleScrollToServices);
-    
-    // Listen for the custom event to make services visible
-    const handleServicesVisible = () => {
-      setIsVisible(true);
-    };
-    
-    window.addEventListener('servicesVisible', handleServicesVisible);
-    
-    return () => {
-      if (featuresRef.current) {
-        observer.unobserve(featuresRef.current);
-      }
-      window.removeEventListener('hashchange', handleScrollToServices);
-      window.removeEventListener('servicesVisible', handleServicesVisible);
-    };
+    return () => observer.disconnect();
   }, []);
   
-  const featuresData = [
+  // Handle direct navigation to #services-section
+  useEffect(() => {
+    if (window.location.hash === '#services-section') {
+      const servicesSection = document.getElementById('services-section');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+  
+  // Handle scroll to services from sessionStorage
+  useEffect(() => {
+    const shouldScrollToServices = sessionStorage.getItem('scrollToServices');
+    if (shouldScrollToServices) {
+      sessionStorage.removeItem('scrollToServices');
+      const servicesSection = document.getElementById('services-section');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+  
+  const services = [
     {
       icon: <DevServicesIcon />,
-      title: 'Dev Services',
-      description: 'We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices.'
+      title: translateString(t, 'categories.dev.title', 'Dev Services'),
+      description: translateString(t, 'categories.dev.description', 'We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices.')
     },
     {
       icon: <ConsultingIcon />,
-      title: 'IT Consulting',
-      description: 'Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals.'
+      title: translateString(t, 'categories.consulting.title', 'IT Consulting'),
+      description: translateString(t, 'categories.consulting.description', 'Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals.')
     },
     {
       icon: <MigrationIcon />,
-      title: 'Infrastructure Migration',
-      description: 'We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process.'
+      title: translateString(t, 'categories.migration.title', 'Infrastructure Migration'),
+      description: translateString(t, 'categories.migration.description', 'We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process.')
     },
     {
       icon: <MonitoringIcon />,
-      title: 'Monitoring',
-      description: 'Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business.'
+      title: translateString(t, 'categories.monitoring.title', 'Monitoring'),
+      description: translateString(t, 'categories.monitoring.description', 'Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business.')
     },
     {
       icon: <DevOpsIcon />,
-      title: 'DevOps/SysOps',
-      description: 'We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability.'
+      title: translateString(t, 'categories.devops.title', 'DevOps/SysOps'),
+      description: translateString(t, 'categories.devops.description', 'We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability.')
     },
     {
       icon: <LinuxIcon />,
-      title: 'Linux Admin',
-      description: 'With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely.'
+      title: translateString(t, 'categories.linux.title', 'Linux Admin'),
+      description: translateString(t, 'categories.linux.description', 'With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely.')
     }
   ];
   
   return (
-    <FeaturesContainer id="services-section" ref={featuresRef}>
-      <FeaturesTitle>Our Services</FeaturesTitle>
+    <FeaturesContainer ref={featuresRef} id="services-section">
+      <FeaturesTitle>
+        {translateReact(t, 'title', 'Our Services')}
+      </FeaturesTitle>
       <FeaturesGrid>
-        {featuresData.map((feature, index) => (
-          <FeatureCard 
-            key={index} 
-            isVisible={isVisible} 
-            index={index}
-            x={cardPositions[index].x}
-            y={cardPositions[index].y}
-            rotate={cardPositions[index].rotate}
-          >
-            <FeatureIcon isVisible={isVisible} index={index}>{feature.icon}</FeatureIcon>
-            <FeatureTitle isVisible={isVisible} index={index}>{feature.title}</FeatureTitle>
-            <FeatureDescription isVisible={isVisible} index={index}>{feature.description}</FeatureDescription>
-          </FeatureCard>
-        ))}
+        {services.map((service, index) => {
+          const position = cardPositions[index];
+          return (
+            <FeatureCard
+              key={index}
+              isVisible={isVisible}
+              index={index}
+              x={position.x}
+              y={position.y}
+              rotate={position.rotate}
+            >
+              <FeatureIcon isVisible={isVisible} index={index}>
+                {service.icon}
+              </FeatureIcon>
+              <FeatureTitle isVisible={isVisible} index={index}>
+                {service.title}
+              </FeatureTitle>
+              <FeatureDescription isVisible={isVisible} index={index}>
+                {service.description}
+              </FeatureDescription>
+            </FeatureCard>
+          );
+        })}
       </FeaturesGrid>
     </FeaturesContainer>
   );

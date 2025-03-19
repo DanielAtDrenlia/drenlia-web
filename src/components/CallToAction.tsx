@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const CTAContainer = styled.section`
   padding: 5rem 0;
@@ -24,7 +26,7 @@ const CTATitle = styled.h2`
   }
 `;
 
-const CTADescription = styled.p`
+const CTAText = styled.p`
   font-size: 1.2rem;
   margin-bottom: 2.5rem;
   line-height: 1.6;
@@ -57,15 +59,31 @@ const CTAButton = styled(Link)`
   }
 `;
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'home', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'home', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const CallToAction: React.FC = () => {
+  const { t, i18n } = useTranslation('home');
+  
   return (
     <CTAContainer>
       <CTAContent>
-        <CTATitle>Ready to Transform Your Digital Presence?</CTATitle>
-        <CTADescription>
-          Let's work together to create innovative solutions that drive your business forward.
-        </CTADescription>
-        <CTAButton to="/contact">Get Started Today</CTAButton>
+        <CTATitle>
+          {translateReact(t, 'cta.title', 'Ready to Transform Your Digital Presence?')}
+        </CTATitle>
+        <CTAText>
+          {translateReact(t, 'cta.description', 'Let\'s discuss how we can help you achieve your goals and take your business to the next level.')}
+        </CTAText>
+        <CTAButton to={`/${i18n.language}/contact`}>
+          {translateReact(t, 'cta.button', 'Get Started')}
+        </CTAButton>
       </CTAContent>
     </CTAContainer>
   );

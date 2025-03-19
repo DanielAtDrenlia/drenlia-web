@@ -10,7 +10,9 @@ const API_BASE_URL = '/api';
 export interface AboutSection {
   about_id: number;
   title: string;
+  fr_title: string | null;
   description: string;
+  fr_description: string | null;
   image_url: string | null;
   display_order: number;
   created_at: string;
@@ -22,8 +24,11 @@ export interface TeamMember {
   team_id: number;
   name: string;
   title: string;
+  fr_title: string | null;
   bio: string | null;
+  fr_bio: string | null;
   image_url: string | null;
+  email: string | null;
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -39,6 +44,10 @@ export interface User {
   google_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TranslationResponse {
+  translation: string;
 }
 
 /**
@@ -441,5 +450,50 @@ export const uploadAboutImage = async (file: File): Promise<{ success: boolean; 
   } catch (error) {
     console.error('Error uploading about image:', error);
     return { success: false };
+  }
+};
+
+/**
+ * Upload an image for a team member
+ * @param file The image file to upload
+ * @returns Promise with upload result
+ */
+export const uploadTeamImage = async (file: File): Promise<{ success: boolean; imagePath?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/admin/upload/team-image`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading team image:', error);
+    return { success: false };
+  }
+};
+
+export const translateText = async (text: string): Promise<string> => {
+  try {
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    const data = await response.json();
+    return data.translation;
+  } catch (error) {
+    console.error('Translation error:', error);
+    throw new Error('Failed to translate text');
   }
 }; 

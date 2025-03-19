@@ -17,11 +17,23 @@ const UsersPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+
+  interface UserFormData {
+    first_name: string;
+    last_name: string;
+    email: string;
+    admin: boolean;
+    password?: string;
+    confirmPassword?: string;
+  }
+
+  const [formData, setFormData] = useState<UserFormData>({
     first_name: '',
     last_name: '',
     email: '',
-    admin: false
+    admin: false,
+    password: '',
+    confirmPassword: ''
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -51,7 +63,9 @@ const UsersPage: React.FC = () => {
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      admin: user.admin
+      admin: user.admin,
+      password: '',
+      confirmPassword: ''
     });
     setIsEditModalOpen(true);
   };
@@ -62,7 +76,9 @@ const UsersPage: React.FC = () => {
       first_name: '',
       last_name: '',
       email: '',
-      admin: false
+      admin: false,
+      password: '',
+      confirmPassword: ''
     });
     setIsAddModalOpen(true);
   };
@@ -440,6 +456,33 @@ const UsersPage: React.FC = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
+                <div>
+                  <label htmlFor="add_password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    id="add_password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="Leave empty for Google auth only"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="add_confirm_password" className="block text-sm font-medium text-gray-700">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    id="add_confirm_password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -450,7 +493,7 @@ const UsersPage: React.FC = () => {
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
                   <label htmlFor="add_admin" className="ml-2 block text-sm text-gray-900">
-                    Admin
+                    Admin User
                   </label>
                 </div>
               </div>
@@ -458,15 +501,14 @@ const UsersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  disabled={submitting}
-                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   {submitting ? 'Creating...' : 'Create User'}
                 </button>

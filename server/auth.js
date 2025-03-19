@@ -11,7 +11,9 @@ const db = require('./db');
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: '/api/auth/google/callback',
+    callbackURL: process.env.NODE_ENV === 'production' 
+      ? 'https://dev.drenlia.com/api/auth/google/callback'
+      : '/api/auth/google/callback',
     // This is critical - it ensures the callback URL is constructed with the correct host
     proxy: true
   },
@@ -58,8 +60,17 @@ function isAdmin(req, res, next) {
   res.status(403).json({ success: false, message: 'Not authorized' });
 }
 
+// Middleware to check if user is authenticated and either admin or has matching email
+function isAuthenticatedOrAdmin(req, res, next) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+  next();
+}
+
 module.exports = {
   passport,
   isAuthenticated,
-  isAdmin
+  isAdmin,
+  isAuthenticatedOrAdmin
 }; 

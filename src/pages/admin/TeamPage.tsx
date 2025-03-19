@@ -1,14 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember, TeamMember } from '../../services/apiService';
+import { getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember, TeamMember, translateText, uploadTeamImage } from '../../services/apiService';
 import Modal from '../../components/Modal';
+import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 // Form data interface for team member
 interface TeamMemberForm {
   name: string;
   title: string;
+  fr_title: string;
   bio: string;
-  image_url: string;
+  fr_bio: string;
+  image_url?: string;
+  email: string;
   display_order: number;
 }
 
@@ -18,16 +23,21 @@ interface TeamMemberForm {
  */
 const TeamPage: React.FC = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation('common');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'fr'>('en');
   const [formData, setFormData] = useState<TeamMemberForm>({
     name: '',
     title: '',
+    fr_title: '',
     bio: '',
+    fr_bio: '',
     image_url: '',
+    email: '',
     display_order: 0
   });
   const [savingMember, setSavingMember] = useState<boolean>(false);
@@ -35,6 +45,42 @@ const TeamPage: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if user has edit permissions for a specific team member
+  const hasEditPermission = (member: TeamMember | null): boolean => {
+    if (!user) return false;
+    if (user.isAdmin) return true; // Admins can edit all members
+    if (!member) return false;
+    return user.email === member.email; // Non-admins can only edit their own profile
+  };
+
+  // Check if user has general admin permissions
+  const hasAdminPermission = (): boolean => {
+    return user?.isAdmin || false;
+  };
+
+  // Check if user can edit specific fields
+  const canEditField = (fieldName: string, member: TeamMember | null): boolean => {
+    if (!user) return false;
+    
+    // Admins can edit all fields of all members
+    if (user.isAdmin) {
+      // Special handling for display_order - only admins can edit it
+      if (fieldName === 'display_order') return true;
+      // Admins can edit all other fields
+      return true;
+    }
+    
+    // Non-admins can only edit certain fields of their own profile
+    if (!member) return false;
+    if (user.email === member.email) {
+      // List of fields that non-admin users can edit of their own profile
+      const editableFields = ['name', 'title', 'fr_title', 'bio', 'fr_bio', 'image_url'];
+      return editableFields.includes(fieldName);
+    }
+    
+    return false;
+  };
 
   // Fetch team members
   useEffect(() => {
@@ -58,12 +104,17 @@ const TeamPage: React.FC = () => {
 
   // Handle add new member
   const handleAddMember = () => {
+    if (!hasAdminPermission()) return;
+    
     setSelectedMember(null);
     setFormData({
       name: '',
       title: '',
+      fr_title: '',
       bio: '',
+      fr_bio: '',
       image_url: '',
+      email: '',
       display_order: members.length > 0 ? Math.max(...members.map(m => m.display_order)) + 1 : 1
     });
     setIsModalOpen(true);
@@ -72,12 +123,17 @@ const TeamPage: React.FC = () => {
 
   // Handle edit member
   const handleEditMember = (member: TeamMember) => {
+    if (!hasEditPermission(member)) return;
+    
     setSelectedMember(member);
     setFormData({
       name: member.name,
       title: member.title,
+      fr_title: member.fr_title || '',
       bio: member.bio || '',
+      fr_bio: member.fr_bio || '',
       image_url: member.image_url || '',
+      email: member.email || '',
       display_order: member.display_order
     });
     setIsModalOpen(true);
@@ -87,6 +143,10 @@ const TeamPage: React.FC = () => {
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Check if user can edit this field
+    if (!canEditField(name, selectedMember)) return;
+    
     setFormData(prev => ({
       ...prev,
       [name]: name === 'display_order' ? parseInt(value, 10) || 0 : value
@@ -121,29 +181,16 @@ const TeamPage: React.FC = () => {
         return;
       }
       
-      const formData = new FormData();
-      formData.append('image', file);
+      const result = await uploadTeamImage(file);
       
-      const response = await fetch('/api/admin/upload/team-image', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload image');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
+      if (result.success && result.imagePath) {
         // Update form data with the new image path
         setFormData(prev => ({
           ...prev,
-          image_url: data.imagePath
+          image_url: result.imagePath
         }));
       } else {
-        setUploadError(data.message || 'Failed to upload image');
+        setUploadError('Failed to upload image. Please try again.');
       }
     } catch (err) {
       console.error('Error uploading image:', err);
@@ -167,13 +214,27 @@ const TeamPage: React.FC = () => {
     try {
       setSavingMember(true);
       
+      // Prepare data with proper null handling for French fields
+      const memberData = {
+        ...formData,
+        fr_title: formData.fr_title.trim() || null,
+        fr_bio: formData.fr_bio.trim() || null,
+        // If image_url is empty string, send null to trigger avatar generation
+        image_url: formData.image_url || null
+      };
+      
+      // Debug: Log the data being sent
+      console.log('Saving member data:', memberData);
+      
       if (selectedMember) {
         // Update existing member
-        const result = await updateTeamMember(selectedMember.team_id, formData);
+        const result = await updateTeamMember(selectedMember.team_id, memberData);
+        console.log('Update result:', result);
         
         if (result.success) {
           // Refresh the members list
           const updatedMembers = await getTeamMembers();
+          console.log('Updated members:', updatedMembers);
           // Sort members by display_order
           const sortedMembers = [...updatedMembers].sort((a, b) => a.display_order - b.display_order);
           setMembers(sortedMembers);
@@ -183,11 +244,13 @@ const TeamPage: React.FC = () => {
         }
       } else {
         // Create new member
-        const result = await createTeamMember(formData);
+        const result = await createTeamMember(memberData);
+        console.log('Create result:', result);
         
         if (result.success) {
           // Refresh the members list
           const updatedMembers = await getTeamMembers();
+          console.log('Updated members:', updatedMembers);
           // Sort members by display_order
           const sortedMembers = [...updatedMembers].sort((a, b) => a.display_order - b.display_order);
           setMembers(sortedMembers);
@@ -242,24 +305,42 @@ const TeamPage: React.FC = () => {
     }
   };
 
+  // Handle translation
+  const handleTranslate = async (field: 'title' | 'bio') => {
+    try {
+      const textToTranslate = field === 'title' ? formData.title : formData.bio;
+      if (!textToTranslate) return;
+
+      const translatedText = await translateText(textToTranslate);
+      setFormData(prev => ({
+        ...prev,
+        [field === 'title' ? 'fr_title' : 'fr_bio']: translatedText,
+      }));
+    } catch (error) {
+      console.error('Translation error:', error);
+      setError('Failed to translate text. Please try again.');
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Team Members</h1>
           <p className="mt-1 text-gray-600">
-            Manage team member profiles that appear on the About page
+            {hasAdminPermission() 
+              ? "Manage all team member profiles"
+              : "Manage team member profiles (You can only edit your own profile)"}
           </p>
         </div>
-        <button
-          onClick={handleAddMember}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Team Member
-        </button>
+        {hasAdminPermission() && (
+          <button
+            onClick={handleAddMember}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Add Team Member
+          </button>
+        )}
       </div>
 
       {error && (
@@ -290,18 +371,24 @@ const TeamPage: React.FC = () => {
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No team members</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by creating a new team member profile.</p>
-          <div className="mt-6">
-            <button
-              onClick={handleAddMember}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New Team Member
-            </button>
-          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            {hasAdminPermission() 
+              ? "Get started by creating a new team member profile."
+              : "No team members have been added yet."}
+          </p>
+          {hasAdminPermission() && (
+            <div className="mt-6">
+              <button
+                onClick={handleAddMember}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                New Team Member
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -325,38 +412,48 @@ const TeamPage: React.FC = () => {
                   </div>
                   <div className="ml-5">
                     <h3 className="text-lg font-medium text-gray-900">{member.name}</h3>
-                    <p className="text-sm text-gray-500">{member.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {selectedLanguage === 'en' ? member.title : member.fr_title || member.title}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600 line-clamp-3">{member.bio}</p>
+                  <p className="text-sm text-gray-600 line-clamp-3">
+                    {selectedLanguage === 'en' ? member.bio : member.fr_bio || member.bio}
+                  </p>
                 </div>
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">Order: {member.display_order}</span>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEditMember(member)}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMember(member.team_id)}
-                      disabled={deletingId === member.team_id}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                      </svg>
-                      {deletingId === member.team_id ? 'Deleting...' : 'Delete'}
-                    </button>
+                    {hasEditPermission(member) && (
+                      <>
+                        <button
+                          onClick={() => handleEditMember(member)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                          Edit
+                        </button>
+                        {hasAdminPermission() && (
+                          <button
+                            onClick={() => handleDeleteMember(member.team_id)}
+                            disabled={deletingId === member.team_id}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18"></path>
+                              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                            </svg>
+                            {deletingId === member.team_id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -365,77 +462,195 @@ const TeamPage: React.FC = () => {
         </div>
       )}
 
-      {/* Team Member Modal - Now with larger size */}
+      {/* Team Member Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="bg-white p-6 rounded-lg max-w-4xl w-full mx-auto overflow-y-auto max-h-[90vh]">
-          <h2 className="text-xl font-semibold text-gray-900 mb-5">
-            {selectedMember ? 'Edit Team Member' : 'Add New Team Member'}
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Full Name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Job Title</label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g. Software Engineer"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio</label>
-                <textarea
-                  id="bio"
-                  name="bio"
-                  rows={6}
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Brief professional biography"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="display_order" className="block text-sm font-medium text-gray-700">Display Order</label>
-                <input
-                  type="number"
-                  id="display_order"
-                  name="display_order"
-                  value={formData.display_order}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  min="1"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">Lower numbers appear first</p>
-              </div>
+        <div className="bg-white p-8 rounded-lg max-w-7xl w-full mx-auto overflow-y-auto max-h-[95vh]">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {selectedMember ? 'Edit Team Member' : 'Add New Team Member'}
+            </h2>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleSaveMember}
+                disabled={savingMember}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingMember ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : 'Save'}
+              </button>
             </div>
-            
-            <div className="space-y-4">
+          </div>
+          
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+              {error}
+            </div>
+          )}
+          
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveMember(); }}>
+            <div className="space-y-8">
+              {/* Name and Display Order */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="Full Name"
+                    required
+                    disabled={!canEditField('name', selectedMember)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="display_order" className="block text-sm font-medium text-gray-700">Display Order</label>
+                  <input
+                    type="number"
+                    id="display_order"
+                    name="display_order"
+                    value={formData.display_order}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    min="1"
+                    required
+                    disabled={!hasAdminPermission()}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Lower numbers appear first</p>
+                </div>
+              </div>
+
+              {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Profile Image</label>
-                
-                {/* Image Upload Area */}
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="team.member@example.com"
+                  disabled={!canEditField('email', selectedMember)}
+                />
+                {!hasAdminPermission() && (
+                  <p className="mt-1 text-xs text-gray-500">Only administrators can change email addresses</p>
+                )}
+              </div>
+
+              {/* Job Titles */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">Job Title (English)</label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="e.g. Software Engineer"
+                    required
+                    disabled={!canEditField('title', selectedMember)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fr_title" className="block text-sm font-medium text-gray-700">Job Title (French)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      id="fr_title"
+                      name="fr_title"
+                      value={formData.fr_title}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <TranslateButton
+                      type="button"
+                      onClick={() => handleTranslate('title')}
+                      className="mt-1"
+                    >
+                      Translate
+                    </TranslateButton>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bios */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio (English)</label>
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    rows={4}
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="Brief professional biography"
+                    disabled={!canEditField('bio', selectedMember)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fr_bio" className="block text-sm font-medium text-gray-700">Bio (French)</label>
+                  <div className="flex gap-2">
+                    <textarea
+                      id="fr_bio"
+                      name="fr_bio"
+                      rows={4}
+                      value={formData.fr_bio}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                    <TranslateButton
+                      type="button"
+                      onClick={() => handleTranslate('bio')}
+                      className="mt-1"
+                    >
+                      Translate
+                    </TranslateButton>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="block text-sm font-medium text-gray-700">Profile Image</label>
+                  {formData.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                      </svg>
+                      Remove Image
+                    </button>
+                  )}
+                </div>
                 <div 
                   className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
                   onDragOver={handleDragOver}
@@ -466,9 +681,9 @@ const TeamPage: React.FC = () => {
                       <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
                         <span>{uploadingImage ? 'Uploading...' : 'Upload a file'}</span>
                         <input 
-                          id="file-upload" 
-                          name="file-upload" 
-                          type="file" 
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
                           className="sr-only"
                           accept="image/*"
                           onChange={handleFileSelect}
@@ -485,60 +700,38 @@ const TeamPage: React.FC = () => {
                 {uploadError && (
                   <p className="mt-2 text-sm text-red-600">{uploadError}</p>
                 )}
-                
-                {formData.image_url && (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                      </svg>
-                      {isAutoGeneratedAvatar(formData.image_url) ? 'Use Different Avatar' : 'Remove Image'}
-                    </button>
-                    {isAutoGeneratedAvatar(formData.image_url) && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        This is an auto-generated avatar based on the name. Upload an image to replace it.
-                      </p>
-                    )}
-                  </div>
-                )}
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
               </div>
             </div>
-          </div>
-          
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveMember}
-              disabled={savingMember || !formData.name || !formData.title}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {savingMember ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : selectedMember ? 'Save Changes' : 'Add Team Member'}
-            </button>
-          </div>
+          </form>
         </div>
       </Modal>
     </div>
   );
 };
+
+const TranslateButton = styled.button`
+  background-color: #2196f3;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  height: fit-content;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: #0b7dda;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 export default TeamPage; 

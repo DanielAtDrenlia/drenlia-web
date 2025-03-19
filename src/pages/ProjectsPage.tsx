@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import type { i18n } from 'i18next';
+import { usePreserveScroll } from '../hooks/usePreserveScroll';
 import CallToAction from '../components/CallToAction';
 import Modal from '../components/Modal';
 
@@ -104,10 +108,16 @@ const FilterButton = styled.button<{ active: boolean }>`
   }
 `;
 
-const ProjectsGrid = styled.div`
+const ProjectsGrid = styled.div<{ isVisible: boolean }>`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
+  opacity: 0;
+  
+  ${({ isVisible }) => isVisible && css`
+    animation: ${fadeIn} 1s ease forwards;
+    animation-delay: 0.8s;
+  `}
 `;
 
 // Generate random starting positions for cards
@@ -308,118 +318,87 @@ const ProjectLink = styled.a`
   }
 `;
 
-// GitHub logo SVG component
-const GitHubIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-  </svg>
-);
-
 const ProjectsPage: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string>('');
-  const [headerVisible, setHeaderVisible] = useState(false);
-  const [projectsVisible, setProjectsVisible] = useState(false);
+  const { t: translate, i18n } = useTranslation('projects');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isVisible, setIsVisible] = useState(false);
+  const [isCardsVisible, setIsCardsVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ src: string; key: string } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  const headerRef = useRef<HTMLDivElement>(null);
-  const projectsGridRef = useRef<HTMLDivElement>(null);
+  usePreserveScroll(i18n);
   
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.2,
-    };
-    
-    // Create observers for header and projects grid
-    const headerObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setHeaderVisible(true);
-        headerObserver.disconnect();
-      }
-    }, observerOptions);
-    
-    const projectsObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setProjectsVisible(true);
-        projectsObserver.disconnect();
-      }
-    }, observerOptions);
-    
-    // Observe elements
-    if (headerRef.current) {
-      headerObserver.observe(headerRef.current);
-    }
-    
-    if (projectsGridRef.current) {
-      projectsObserver.observe(projectsGridRef.current);
-    }
-    
-    // Cleanup
-    return () => {
-      headerObserver.disconnect();
-      projectsObserver.disconnect();
-    };
+    // Set visibility to true immediately on mount
+    setIsVisible(true);
+    // Start with cards invisible
+    setIsCardsVisible(false);
+    // Trigger card animations after a short delay
+    const timer = setTimeout(() => {
+      setIsCardsVisible(true);
+    }, 800); // Match the delay with the header animations
+    return () => clearTimeout(timer);
   }, []);
-  
+
+  // Handle category changes without refreshing the page
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setIsCardsVisible(false);
+    const timer = setTimeout(() => {
+      setIsCardsVisible(true);
+    }, 50);
+    return () => clearTimeout(timer);
+  };
+
   const projects = [
     {
       id: 1,
-      title: 'Kanban App',
+      key: 'kanban',
       category: 'web',
       status: 'completed' as const,
-      description: 'A free and open source simple kanban board application for quick task management with drag-and-drop functionality, task assignments, and progress tracking.',
       image: '/images/projects/kanban-app.png',
       link: 'https://github.com/DanielAtDrenlia/easy-kanban',
       demoLink: 'https://kanban.demo.drenlia.com/'
     },
     {
       id: 2,
-      title: 'Team Scheduler App',
+      key: 'teamScheduler',
       category: 'web',
       status: 'completed' as const,
-      description: 'A free and open source collaborative calendar application that allows teams to schedule work shifts, drag and drop schedules, and more. Effortlessly schedule shifts for your team!',
       image: '/images/projects/calendar-app.png',
       link: 'https://github.com/DanielAtDrenlia/teamcal',
       demoLink: 'https://teamcal.demo.drenlia.com/'
     },
     {
       id: 3,
-      title: 'Secure Mail',
+      key: 'secureMail',
       category: 'web',
       status: 'in-progress' as const,
-      description: 'An encrypted email platform with advanced security features, ensuring your communications remain private and protected.',
       image: '/images/projects/secure-mail.png',
       link: '#'
     },
     {
       id: 4,
-      title: 'ClueCam',
+      key: 'clueCam',
       category: 'mobile',
       status: 'in-progress' as const,
-      description: 'A mobile application that uses the camera to locate objects in real-time, perfect for learning and exploring.',
       image: '/images/projects/cluecam.png',
       link: '#'
     }
   ];
   
   const filters = [
-    { id: 'all', label: 'All Projects' },
-    { id: 'web', label: 'Web Development' },
-    { id: 'mobile', label: 'Mobile Apps' }
+    { id: 'all', label: translate('filters.all', 'All') },
+    { id: 'web', label: translate('filters.web', 'Web') },
+    { id: 'mobile', label: translate('filters.mobile', 'Mobile') }
   ];
   
-  const filteredProjects = activeFilter === 'all' 
+  const filteredProjects = selectedCategory === 'all' 
     ? projects 
-    : projects.filter(project => project.category === activeFilter);
+    : projects.filter(project => project.category === selectedCategory);
     
-  // Generate random positions for each project card
-  const cardPositions = Array(projects.length).fill(0).map((_, index) => getRandomPosition(index));
-  
-  const handleImageClick = (imageSrc: string, title: string) => {
-    setSelectedImage(imageSrc);
-    setSelectedTitle(title);
+  const handleImageClick = (imageSrc: string, key: string) => {
+    setSelectedImage({ src: imageSrc, key });
   };
   
   const closeModal = () => {
@@ -428,66 +407,68 @@ const ProjectsPage: React.FC = () => {
   
   return (
     <>
-      <ProjectsContainer>
-        <ProjectsHeader ref={headerRef}>
-          <ProjectsTitle isVisible={headerVisible}>Our Projects</ProjectsTitle>
-          <ProjectsSubtitle isVisible={headerVisible}>
-            Explore our portfolio of innovative digital solutions that have helped some 
-            of our clients achieve their needs.
+      <ProjectsContainer ref={containerRef}>
+        <ProjectsHeader id="projects-header">
+          <ProjectsTitle isVisible={isVisible}>{translate('title', 'Our Projects') as string}</ProjectsTitle>
+          <ProjectsSubtitle isVisible={isVisible}>
+            {translate('subtitle', 'Discover our portfolio of successful digital solutions') as string}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
-        <FilterContainer isVisible={headerVisible}>
+        <FilterContainer isVisible={isVisible}>
           {filters.map(filter => (
             <FilterButton 
               key={filter.id} 
-              active={activeFilter === filter.id}
-              onClick={() => setActiveFilter(filter.id)}
+              active={selectedCategory === filter.id}
+              onClick={() => handleCategoryChange(filter.id)}
             >
-              {filter.label}
+              {filter.label as string}
             </FilterButton>
           ))}
         </FilterContainer>
         
-        <ProjectsGrid ref={projectsGridRef}>
+        <ProjectsGrid id="projects-grid" isVisible={isVisible}>
           {filteredProjects.map((project, index) => {
-            const position = cardPositions[projects.findIndex(p => p.id === project.id)];
+            const position = getRandomPosition(index);
             return (
               <ProjectCard 
                 key={project.id} 
-                isVisible={projectsVisible}
+                isVisible={isCardsVisible}
                 index={index}
                 x={position.x}
                 y={position.y}
                 rotate={position.rotate}
               >
-                <ProjectImage onClick={() => handleImageClick(project.image, project.title)}>
-                  <img src={project.image} alt={project.title} />
+                <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
+                  <img src={project.image} alt={translate(`projects.${project.key}.title`, '') as string} />
                 </ProjectImage>
                 <ProjectContent>
-                  <ProjectCategory>{filters.find(f => f.id === project.category)?.label}</ProjectCategory>
-                  <ProjectTitle>{project.title}</ProjectTitle>
+                  <ProjectCategory>{filters.find(f => f.id === project.category)?.label as string}</ProjectCategory>
+                  <ProjectTitle>{translate(`projects.${project.key}.title`, '') as string}</ProjectTitle>
                   <StatusContainer>
                     <StatusDot status={project.status} />
                     <StatusText>
-                      {project.status === 'completed' ? 'Completed' : 'In Progress'}
+                      {translate(`status.${project.status}`, '') as string}
                     </StatusText>
                   </StatusContainer>
-                  <ProjectDescription>{project.description}</ProjectDescription>
+                  <ProjectDescription>{translate(`projects.${project.key}.description`, '') as string}</ProjectDescription>
                   <ProjectLinks>
                     {project.link && project.link.includes('github') && (
                       <GitHubLink href={project.link} target="_blank" rel="noopener noreferrer" title="View on GitHub">
-                        <GitHubIcon />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                        </svg>
+                        <span>{translate('actions.viewOnGitHub', 'View on GitHub') as string}</span>
                       </GitHubLink>
                     )}
                     {project.link && !project.link.includes('github') && project.link !== '#' && (
                       <ProjectLink href={project.link} target="_blank" rel="noopener noreferrer">
-                        View Project
+                        {translate('actions.viewProject', 'View Project') as string}
                       </ProjectLink>
                     )}
                     {project.demoLink && (
                       <DemoButton href={project.demoLink} target="_blank" rel="noopener noreferrer">
-                        Demo
+                        {translate('actions.demo', 'Live Demo') as string}
                       </DemoButton>
                     )}
                   </ProjectLinks>
@@ -499,7 +480,10 @@ const ProjectsPage: React.FC = () => {
       </ProjectsContainer>
       
       <Modal isOpen={!!selectedImage} onClose={closeModal}>
-        <ModalImage src={selectedImage || ''} alt={selectedTitle} />
+        <ModalImage 
+          src={selectedImage?.src || ''} 
+          alt={selectedImage?.key ? (translate(`projects.${selectedImage.key}.title`, '') as string) : ''} 
+        />
       </Modal>
       
       <CallToAction />

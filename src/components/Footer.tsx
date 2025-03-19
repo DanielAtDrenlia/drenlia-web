@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import ObfuscatedEmail from './ObfuscatedEmail';
 
 const FooterContainer = styled.footer`
   background-color: var(--primary-color);
@@ -104,23 +108,13 @@ const Tooltip = styled.span<{ visible: boolean }>`
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.8rem;
-  white-space: nowrap;
-  z-index: 10;
-  margin-bottom: 5px;
-  opacity: ${props => props.visible ? 1 : 0};
-  transition: opacity 0.3s ease;
+  white-space: pre-line;
+  text-align: center;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  visibility: ${({ visible }) => (visible ? 'visible' : 'hidden')};
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  z-index: 1000;
   pointer-events: none;
-  
-  &::before {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-  }
 `;
 
 const PhoneContainer = styled.span`
@@ -128,7 +122,7 @@ const PhoneContainer = styled.span`
   cursor: help;
   
   &:hover::after {
-    content: "this is obviously a phony number! Please use the email address above.";
+    content: attr(data-tooltip);
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -172,130 +166,112 @@ const ContactLabel = styled.span`
   vertical-align: top;
 `;
 
-/**
- * ObfuscatedEmail component that prevents easy copy-pasting
- * by splitting the email into parts and using CSS to display it
- */
-const ObfuscatedEmail: React.FC = () => {
-  const [tooltipText, setTooltipText] = useState("Click to copy email");
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  
-  // Email parts stored separately to avoid easy scraping
-  const emailUser = "info";
-  const emailDomain = "drenlia.com";
-  
-  const handleCopyEmail = () => {
-    // Assemble the email only when clicked
-    const email = `${emailUser}@${emailDomain}`;
-    
-    // Use the clipboard API to copy the email
-    navigator.clipboard.writeText(email)
-      .then(() => {
-        setTooltipText("Email copied!");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      })
-      .catch(() => {
-        setTooltipText("Failed to copy");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      });
-  };
-  
-  const handleMouseEnter = () => {
-    setTooltipText("Click to copy email");
-    setTooltipVisible(true);
-  };
-  
-  const handleMouseLeave = () => {
-    setTooltipVisible(false);
-  };
-  
-  return (
-    <EmailContainer 
-      onClick={handleCopyEmail}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      aria-label="Click to copy email address"
-    >
-      <Tooltip visible={tooltipVisible}>{tooltipText}</Tooltip>
-      <span style={{ display: 'none' }}>email-protected</span>
-      <EmailPart>i</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>f</EmailPart>
-      <EmailPart>o</EmailPart>
-      <EmailSymbol>@</EmailSymbol>
-      <EmailPart>d</EmailPart>
-      <EmailPart>r</EmailPart>
-      <EmailPart>e</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>l</EmailPart>
-      <EmailPart>i</EmailPart>
-      <EmailPart>a</EmailPart>
-      <EmailPart>.</EmailPart>
-      <EmailPart>c</EmailPart>
-      <EmailPart>o</EmailPart>
-      <EmailPart>m</EmailPart>
-    </EmailContainer>
-  );
+const FooterText = styled.p`
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+`;
+
+const FooterLinks = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const ContactInfo = styled.div`
+  margin-top: 1rem;
+`;
+
+const ContactItem = styled.div`
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+`;
+
+const FooterBottom = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+`;
+
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'common', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'common', undefined>, key: string, defaultValue: string, options?: Record<string, any>): React.ReactNode => {
+  return t(key, { ...options, defaultValue });
 };
 
 const Footer: React.FC = () => {
+  const { t, i18n } = useTranslation('common');
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <FooterContainer>
       <FooterContent>
         <FooterSection>
-          <FooterTitle>Drenlia</FooterTitle>
-          <p>Creating innovative solutions for modern problems.</p>
-          <SocialLinks>
-            <SocialIcon href="https://github.com/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-github"></i>
-            </SocialIcon>
-            <SocialIcon href="https://twitter.com/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-twitter"></i>
-            </SocialIcon>
-            <SocialIcon href="https://linkedin.com/in/drenlia" target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-linkedin"></i>
-            </SocialIcon>
-          </SocialLinks>
+          <FooterTitle>
+            {translateReact(t, 'footer.about.title', 'About Us')}
+          </FooterTitle>
+          <FooterText>
+            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
+          </FooterText>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>Quick Links</FooterTitle>
-          <FooterLink to="/">Home</FooterLink>
-          <FooterLink to="/about">About</FooterLink>
-          <FooterLink to="/projects">Projects</FooterLink>
-          <FooterLink to="/contact">Contact</FooterLink>
+          <FooterTitle>
+            {translateReact(t, 'footer.links.title', 'Quick Links')}
+          </FooterTitle>
+          <FooterLinks>
+            <FooterLink to={`/${i18n.language}`}>
+              {translateReact(t, 'nav.home', 'Home')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/about`}>
+              {translateReact(t, 'nav.about', 'About')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/services`}>
+              {translateReact(t, 'nav.services', 'Services')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/contact`}>
+              {translateReact(t, 'nav.contact', 'Contact')}
+            </FooterLink>
+          </FooterLinks>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>Contact</FooterTitle>
-          <p><ContactLabel>Email:</ContactLabel> <ObfuscatedEmail /></p>
-          <p><ContactLabel>Phone:</ContactLabel> <PhoneContainer>+1 (555) 123-4567</PhoneContainer></p>
-          <div>
-            <ContactLabel>Address:</ContactLabel>
-            <AddressContainer>
-              <AddressLine>7037 rue des Tournesols</AddressLine>
-              <AddressLine>Saint-Hubert, QC</AddressLine>
-              <AddressLine>J3Y 8S2</AddressLine>
-              <AddressLine>Canada</AddressLine>
-            </AddressContainer>
-          </div>
+          <FooterTitle>
+            {translateReact(t, 'footer.contact.title', 'Contact Us')}
+          </FooterTitle>
+          <ContactInfo>
+            <ContactItem>
+              <ContactLabel>Email:</ContactLabel> <ObfuscatedEmail />
+            </ContactItem>
+            <ContactItem>
+              <PhoneContainer data-tooltip={translateString(t, 'footer.contact.phone_tooltip', 'Click to call')}>
+                {translateReact(t, 'footer.contact.phone', '+1 (555) 123-4567')}
+              </PhoneContainer>
+            </ContactItem>
+            <ContactItem>
+              <AddressContainer>
+                {(translateString(t, 'footer.contact.address', '123 Business Street\nSuite 100\nCity, State 12345'))
+                  .split('\n')
+                  .map((line: string, index: number) => (
+                    <AddressLine key={index}>{line}</AddressLine>
+                  ))}
+              </AddressContainer>
+            </ContactItem>
+          </ContactInfo>
         </FooterSection>
       </FooterContent>
-      
+
       <Copyright>
-        &copy; {currentYear} Drenlia. All rights reserved.
+        {translateReact(t, 'footer.copyright', '© {{year}} Drenlia. All rights reserved.', { year: currentYear })}
       </Copyright>
     </FooterContainer>
   );

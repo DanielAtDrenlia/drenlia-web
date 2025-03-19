@@ -11,10 +11,15 @@ const auth = require('./auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const { createCanvas } = require('canvas');
+const translateRouter = require('./routes/translate');
+const { generateLetterAvatar } = require('./utils/avatarGenerator');
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3011;
 
 // Trust proxy headers - this is important for correct URL construction behind proxies
 app.set('trust proxy', true);
@@ -26,8 +31,9 @@ app.set('trust proxy', true);
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'drenlia-captcha-secret',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
+  rolling: true,
   cookie: { 
     secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
@@ -39,18 +45,6 @@ app.use(session({
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
-
-// Debug middleware to log session info
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] Request: ${req.method} ${req.path}`);
-  console.log(`Session ID: ${req.session.id}`);
-  console.log(`Session captchaText: ${req.session.captchaText || 'not set'}`);
-  console.log(`Authenticated: ${req.isAuthenticated()}`);
-  if (req.isAuthenticated()) {
-    console.log(`User: ${req.user.email} (Admin: ${req.user.admin ? 'Yes' : 'No'})`);
-  }
-  next();
-});
 
 // Security middleware
 app.use(helmet({
@@ -75,10 +69,11 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
@@ -162,44 +157,57 @@ app.get('/api/debug', (req, res) => {
 
 // Authentication routes
 app.get('/api/auth/google', (req, res, next) => {
-  // Log the request information
-  console.log('Google auth request:');
-  console.log('- Protocol:', req.protocol);
-  console.log('- Host:', req.get('host'));
-  console.log('- Original URL:', req.originalUrl);
-  console.log('- Full URL:', `${req.protocol}://${req.get('host')}${req.originalUrl}`);
-  console.log('- Headers:', JSON.stringify(req.headers, null, 2));
+  // Store the return URL in the session if provided
+  if (req.query.returnTo) {
+    const decodedReturnTo = decodeURIComponent(req.query.returnTo);
+    req.session.returnTo = decodedReturnTo;
+  }
   
-  // Continue with authentication
-  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  // Save the session before continuing with authentication
+  req.session.save((err) => {
+    if (err) {
+      console.error('Error saving session:', err);
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
 });
 
 app.get('/api/auth/google/callback', 
-  passport.authenticate('google', { 
-    failureRedirect: '/admin/login',
-    session: true
-  }),
-  (req, res) => {
-    // Get the frontend URL based on the request
-    let frontendUrl;
-    
-    // Check if we're behind a proxy
-    if (req.headers['x-forwarded-host']) {
-      // Use the protocol and host from the forwarded headers
-      const protocol = req.headers['x-forwarded-proto'] || 'https';
-      frontendUrl = `${protocol}://${req.headers['x-forwarded-host']}`;
-    } else if (process.env.FRONTEND_URL) {
-      // Use the configured frontend URL
-      frontendUrl = process.env.FRONTEND_URL;
-    } else {
-      // Default to localhost:3010 in development
-      frontendUrl = 'http://localhost:3010';
-    }
-    
-    console.log(`Redirecting to: ${frontendUrl}/admin`);
-    
-    // Successful authentication, redirect to admin page with absolute URL
-    res.redirect(`${frontendUrl}/admin`);
+  (req, res, next) => {
+    // Store returnTo URL before authentication
+    const returnTo = req.session.returnTo;
+    passport.authenticate('google', { 
+      failureRedirect: '/admin/login',
+      session: true
+    })(req, res, (err) => {
+      if (err) { return next(err); }
+      
+      // Get the frontend URL based on the request
+      let frontendUrl;
+      
+      // Check if we're behind a proxy
+      if (req.headers['x-forwarded-host']) {
+        // Use the protocol and host from the forwarded headers
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        frontendUrl = `${protocol}://${req.headers['x-forwarded-host']}`;
+      } else if (process.env.FRONTEND_URL) {
+        // Use the configured frontend URL
+        frontendUrl = process.env.FRONTEND_URL;
+      } else {
+        // Default to localhost:3010 in development
+        frontendUrl = 'http://localhost:3010';
+      }
+      
+      // Use the stored returnTo URL or default to /admin
+      const finalReturnTo = returnTo || '/admin';
+      
+      // Ensure the return URL starts with a forward slash
+      const normalizedReturnTo = finalReturnTo.startsWith('/') ? finalReturnTo : `/${finalReturnTo}`;
+      const finalUrl = `${frontendUrl}${normalizedReturnTo}`;
+      
+      // Redirect to the stored return URL or default to admin page
+      res.redirect(finalUrl);
+    });
   }
 );
 
@@ -230,6 +238,88 @@ app.get('/api/auth/status', (req, res) => {
   }
 });
 
+// Move the local login endpoint here, before other routes
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Get user by email
+    const user = db.users.getUserByEmail(email);
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check if user has a password (is a local account)
+    if (!user.password_hash) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account uses Google authentication'
+      });
+    }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Set user in session using Passport
+    req.login(user, (err) => {
+      if (err) {
+        console.error('Error logging in user:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error during login'
+        });
+      }
+
+      // Save session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving session:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Error during login'
+          });
+        }
+
+        res.json({
+          success: true,
+          user: {
+            id: user.user_id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            isAdmin: !!user.admin
+          }
+        });
+      });
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during login'
+    });
+  }
+});
+
 // Admin routes
 app.get('/api/admin/users', auth.isAdmin, (req, res) => {
   try {
@@ -242,38 +332,52 @@ app.get('/api/admin/users', auth.isAdmin, (req, res) => {
 });
 
 // Create a new user
-app.post('/api/admin/users', auth.isAdmin, (req, res) => {
+app.post('/api/admin/users', auth.isAdmin, async (req, res) => {
   try {
-    const { first_name, last_name, email, admin } = req.body;
-    
+    const { first_name, last_name, email, admin, password } = req.body;
+
+    // Validate required fields
     if (!first_name || !last_name || !email) {
-      return res.status(400).json({ success: false, message: 'First name, last name, and email are required' });
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ success: false, message: 'Invalid email format' });
-    }
-    
-    try {
-      const id = db.users.createUser({
-        first_name,
-        last_name,
-        email,
-        admin: !!admin
+      return res.status(400).json({
+        success: false,
+        message: 'First name, last name, and email are required'
       });
-      
-      res.json({ success: true, id });
-    } catch (err) {
-      if (err.message.includes('already exists')) {
-        return res.status(400).json({ success: false, message: err.message });
-      }
-      throw err;
     }
+
+    // Check if user with this email already exists
+    const existingUser = db.users.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
+    }
+
+    // Hash password if provided (for local accounts)
+    let password_hash = null;
+    if (password) {
+      password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    }
+
+    // Create user with hashed password
+    const result = db.users.createUser({
+      first_name,
+      last_name,
+      email,
+      admin: Boolean(admin),
+      password_hash
+    });
+
+    res.json({
+      success: true,
+      id: result.id
+    });
   } catch (error) {
     console.error('Error creating user:', error);
-    res.status(500).json({ success: false, message: 'Error creating user' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create user'
+    });
   }
 });
 
@@ -380,7 +484,7 @@ app.get('/api/about', (req, res) => {
 
 app.post('/api/admin/about', auth.isAdmin, (req, res) => {
   try {
-    const { title, description, image_url, display_order } = req.body;
+    const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
     if (!title || !description) {
       return res.status(400).json({ success: false, message: 'Title and description are required' });
@@ -388,7 +492,9 @@ app.post('/api/admin/about', auth.isAdmin, (req, res) => {
     
     const id = db.about.createSection({
       title,
+      fr_title: fr_title || null,
       description,
+      fr_description: fr_description || null,
       image_url: image_url || null,
       display_order: display_order || 0
     });
@@ -426,17 +532,15 @@ app.put('/api/admin/about/reorder', auth.isAdmin, (req, res) => {
 app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { title, description, image_url, display_order } = req.body;
-    
-    if (!title || !description) {
-      return res.status(400).json({ success: false, message: 'Title and description are required' });
-    }
+    const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
     const success = db.about.updateSection(id, {
       title,
+      fr_title,
       description,
-      image_url: image_url !== undefined ? image_url : undefined,
-      display_order: display_order || 0
+      fr_description,
+      image_url,
+      display_order
     });
     
     if (success) {
@@ -465,52 +569,6 @@ app.delete('/api/admin/about/:id', auth.isAdmin, (req, res) => {
     res.status(500).json({ success: false, message: 'Error deleting about section' });
   }
 });
-
-// Function to generate letter avatar
-const generateLetterAvatar = (name, size = 200) => {
-  // Extract initials from name
-  const initials = name
-    .split(' ')
-    .map(part => part.charAt(0))
-    .join('')
-    .toUpperCase()
-    .substring(0, 2); // Get at most 2 initials
-
-  // Create canvas
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext('2d');
-
-  // Define colors - pastel colors that work well with dark text
-  const colors = [
-    '#F4BFBF', // light pink
-    '#FFD9C0', // peach
-    '#FAF0D7', // cream
-    '#8CC0DE', // light blue
-    '#CCCCFF', // lavender
-    '#D8F8B7', // light green
-    '#FF9999', // salmon
-    '#FFDAB9', // peachpuff
-    '#B0E0E6', // powderblue
-    '#FFC0CB', // pink
-  ];
-
-  // Get a consistent color based on the name
-  const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-  const bgColor = colors[colorIndex];
-
-  // Draw background
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, size, size);
-
-  // Draw text
-  ctx.fillStyle = '#333333'; // Dark text for contrast
-  ctx.font = `bold ${size / 2}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(initials, size / 2, size / 2);
-
-  return canvas.toBuffer('image/png');
-};
 
 // Team routes
 app.get('/api/team', (req, res) => {
@@ -561,21 +619,47 @@ app.post('/api/admin/team', auth.isAdmin, (req, res) => {
   }
 });
 
-app.put('/api/admin/team/:id', auth.isAdmin, (req, res) => {
+app.put('/api/admin/team/:id', auth.isAuthenticatedOrAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, title, bio, image_url, display_order } = req.body;
+    const { name, title, bio, image_url, display_order, fr_title, fr_bio, email } = req.body;
     
     if (!name || !title) {
       return res.status(400).json({ success: false, message: 'Name and title are required' });
     }
-    
-    // Get the current member to check if we need to generate an avatar
+
+    // Get the current member to check permissions and handle image
     const currentMember = db.team.getMemberById(id);
+    if (!currentMember) {
+      return res.status(404).json({ success: false, message: 'Team member not found' });
+    }
+
+    // Check if user has permission to edit this member
+    if (!req.user.admin && (!currentMember.email || currentMember.email !== req.user.email)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+
+    // Non-admin users cannot change email or display_order
+    const updateData = {
+      name,
+      title,
+      bio,
+      fr_title,
+      fr_bio,
+      image_url: image_url || currentMember.image_url
+    };
+
+    // Only allow admin users to update these fields
+    if (req.user.admin) {
+      updateData.email = email;
+      updateData.display_order = display_order || 0;
+    } else {
+      updateData.email = currentMember.email;
+      updateData.display_order = currentMember.display_order;
+    }
     
-    // If no image_url is provided and there wasn't one before (or name changed), generate a letter avatar
-    let finalImageUrl = image_url;
-    if (!finalImageUrl && (!currentMember.image_url || currentMember.name !== name)) {
+    // Handle image removal and avatar generation
+    if (image_url === null || image_url === '') {
       // Generate a unique filename
       const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
       const avatarPath = path.join(teamImagesDir, filename);
@@ -585,24 +669,15 @@ app.put('/api/admin/team/:id', auth.isAdmin, (req, res) => {
       fs.writeFileSync(avatarPath, avatarBuffer);
       
       // Set the image URL to the generated avatar
-      finalImageUrl = `/images/team/${filename}`;
-    } else if (!finalImageUrl && currentMember.image_url) {
-      // Keep the existing image if there is one
-      finalImageUrl = currentMember.image_url;
+      updateData.image_url = `/images/team/${filename}`;
     }
     
-    const success = db.team.updateMember(id, {
-      name,
-      title,
-      bio,
-      image_url: finalImageUrl,
-      display_order: display_order || 0
-    });
+    const success = db.team.updateMember(id, updateData);
     
     if (success) {
       res.json({ success: true });
     } else {
-      res.status(404).json({ success: false, message: 'Team member not found' });
+      res.status(500).json({ success: false, message: 'Failed to update team member' });
     }
   } catch (error) {
     console.error('Error updating team member:', error);
@@ -675,9 +750,6 @@ app.post('/api/admin/upload/about-image', auth.isAdmin, upload.single('image'), 
 
 // Generate captcha endpoint
 app.get('/api/captcha', (req, res) => {
-  console.log('Captcha generation request received');
-  console.log('- Session ID:', req.session.id);
-  
   // Create a captcha with options - simplified configuration
   const captcha = svgCaptcha.create({
     size: 6, // number of characters
@@ -692,23 +764,18 @@ app.get('/api/captcha', (req, res) => {
   
   // Store the captcha text in session
   req.session.captchaText = captcha.text;
-  console.log('- Generated captcha text:', captcha.text);
-  console.log('- SVG data length:', captcha.data.length);
   
   // Set proper headers for SVG
   res.setHeader('Content-Type', 'image/svg+xml');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   
-  // Send the SVG image - using original SVG data without modifications
+  // Send the SVG image
   res.status(200).send(captcha.data);
 });
 
 // Alternative captcha endpoint that returns a data URL
 app.get('/api/captcha-data-url', (req, res) => {
-  console.log('Data URL captcha generation request received');
-  console.log('- Session ID:', req.session.id);
-  
   // Create a captcha with options - simplified configuration
   const captcha = svgCaptcha.create({
     size: 6,
@@ -723,7 +790,6 @@ app.get('/api/captcha-data-url', (req, res) => {
   
   // Store the captcha text in session
   req.session.captchaText = captcha.text;
-  console.log('- Generated captcha text:', captcha.text);
   
   // Save session explicitly to ensure it's stored
   req.session.save(err => {
@@ -731,7 +797,7 @@ app.get('/api/captcha-data-url', (req, res) => {
       console.error('Error saving session:', err);
     }
     
-    // Convert SVG to data URL - using original SVG data without modifications
+    // Convert SVG to data URL
     const dataUrl = `data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}`;
     
     // Send the data URL as JSON
@@ -747,14 +813,8 @@ app.get('/api/captcha-data-url', (req, res) => {
 app.post('/api/verify-captcha', (req, res) => {
   const { captchaInput } = req.body;
   
-  console.log('Captcha verification request received:');
-  console.log('- Input:', captchaInput);
-  console.log('- Session captcha text:', req.session.captchaText);
-  console.log('- Session ID:', req.session.id);
-  
   // Check if captcha text exists in session
   if (!req.session.captchaText) {
-    console.log('Captcha text not found in session');
     return res.status(400).json({ 
       success: false, 
       message: 'Captcha expired. Please refresh and try again.' 
@@ -765,12 +825,8 @@ app.post('/api/verify-captcha', (req, res) => {
   const normalizedInput = (captchaInput || '').trim().toLowerCase();
   const normalizedCaptcha = (req.session.captchaText || '').trim().toLowerCase();
   
-  console.log('Normalized input:', normalizedInput);
-  console.log('Normalized captcha:', normalizedCaptcha);
-  
   // Case-insensitive comparison
   const isValid = normalizedInput === normalizedCaptcha;
-  console.log('Captcha validation result:', isValid);
   
   if (isValid) {
     // Set a flag in session indicating captcha is verified
@@ -849,6 +905,148 @@ app.get('/api/health', (req, res) => {
     version: db.settings.getSetting('version') || '1.0.0'
   });
 });
+
+// Settings routes
+app.get('/api/admin/settings', auth.isAuthenticated, (req, res) => {
+  try {
+    const settings = db.settings.getAllSettings();
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching settings' });
+  }
+});
+
+app.post('/api/admin/settings', auth.isAdmin, (req, res) => {
+  try {
+    const { key, value } = req.body;
+    
+    if (!key || value === undefined) {
+      return res.status(400).json({ success: false, message: 'Key and value are required' });
+    }
+    
+    db.settings.setSetting(key, value);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating setting:', error);
+    res.status(500).json({ success: false, message: 'Error updating setting' });
+  }
+});
+
+// Translation routes
+app.get('/api/admin/translations', auth.isAuthenticated, async (req, res) => {
+  console.log('Translations GET route hit');
+  try {
+    const enDir = path.join(__dirname, '..', 'public', 'locales', 'en');
+    const frDir = path.join(__dirname, '..', 'public', 'locales', 'fr');
+
+    console.log('Directories:', { enDir, frDir });
+
+    // Check if directories exist
+    try {
+      await fsPromises.access(enDir);
+      await fsPromises.access(frDir);
+      console.log('Directories exist');
+    } catch (error) {
+      console.error('Translation directories not found:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Translation directories not found',
+        error: error.message,
+        paths: { enDir, frDir }
+      });
+    }
+
+    // Read all JSON files from both directories
+    const [enFiles, frFiles] = await Promise.all([
+      fsPromises.readdir(enDir).then(files => files.filter(file => file.endsWith('.json'))),
+      fsPromises.readdir(frDir).then(files => files.filter(file => file.endsWith('.json')))
+    ]);
+
+    console.log('Files found:', { enFiles, frFiles });
+
+    // Create pairs of translations
+    const translations = await Promise.all(enFiles.map(async filename => {
+      try {
+        const [enContent, frContent] = await Promise.all([
+          fsPromises.readFile(path.join(enDir, filename), 'utf8').then(JSON.parse),
+          fsPromises.readFile(path.join(frDir, filename), 'utf8').then(JSON.parse)
+        ]);
+
+        return {
+          en: {
+            name: filename,
+            content: enContent
+          },
+          fr: {
+            name: filename,
+            content: frContent
+          }
+        };
+      } catch (error) {
+        console.error(`Error processing file ${filename}:`, error);
+        return null;
+      }
+    }));
+
+    // Filter out any failed translations
+    const validTranslations = translations.filter(t => t !== null);
+
+    console.log('Sending response with translations');
+    res.json({ success: true, translations: validTranslations });
+  } catch (error) {
+    console.error('Error fetching translations:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching translations',
+      error: error.message 
+    });
+  }
+});
+
+app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
+  try {
+    const { locale, filename, content } = req.body;
+
+    if (!locale || !filename || !content) {
+      return res.status(400).json({ success: false, message: 'Locale, filename, and content are required' });
+    }
+
+    if (!['en', 'fr'].includes(locale)) {
+      return res.status(400).json({ success: false, message: 'Invalid locale' });
+    }
+
+    const filePath = path.join(__dirname, '..', 'public', 'locales', locale, filename);
+    
+    // Check if file exists
+    try {
+      await fsPromises.access(filePath);
+    } catch (error) {
+      console.error('Translation file not found:', error);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Translation file not found',
+        error: error.message,
+        path: filePath
+      });
+    }
+    
+    // Write the updated content back to the file
+    await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating translation:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating translation',
+      error: error.message 
+    });
+  }
+});
+
+// Routes
+app.use('/api/translate', translateRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

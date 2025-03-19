@@ -77,4 +77,26 @@ export const logout = async (): Promise<{ success: boolean }> => {
  */
 export const loginWithGoogle = (): void => {
   window.location.href = `${API_BASE_URL}/auth/google`;
+};
+
+export const loginWithCredentials = async (email: string, password: string): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      return { success: false };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false };
+  }
 }; 
