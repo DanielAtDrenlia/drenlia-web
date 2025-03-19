@@ -25,6 +25,18 @@
     "status": {
       "success": "Merci ! Votre message a été envoyé.",
       "error": "Désolé, une erreur s'est produite. Veuillez réessayer."
+    },
+    "service": {
+      "available": "Le service d'email est disponible"
+    },
+    "error": {
+      "name": "Veuillez entrer votre nom",
+      "email": "Veuillez entrer une adresse email valide",
+      "message": "Veuillez entrer votre message",
+      "captcha": "Veuillez compléter la vérification du captcha",
+      "submit": "Échec de l'envoi du message. Veuillez réessayer.",
+      "success": "Message envoyé avec succès !",
+      "invalidEmail": "Veuillez entrer une adresse email valide"
     }
   },
   "location": {
@@ -51,6 +63,11 @@
     "loading": "Chargement du captcha...",
     "valid": "Vérification réussie",
     "invalid": "Code incorrect, veuillez réessayer",
-    "error": "Erreur de chargement du captcha. Veuillez réessayer."
+    "error": "Erreur de chargement du captcha. Veuillez réessayer.",
+    "alt": "Image CAPTCHA",
+    "verifying": "Vérification en cours...",
+    "error": {
+      "load": "Échec du chargement du captcha"
+    }
   }
 } 

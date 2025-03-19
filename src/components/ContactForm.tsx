@@ -19,6 +19,12 @@ const FormContainer = styled.form`
   gap: 1.5rem;
 `;
 
+const ErrorMessage = styled.div`
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+`;
+
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -401,17 +407,59 @@ const ContactForm: React.FC<ContactFormProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [internalCaptchaValid, setInternalCaptchaValid] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
   
   // Use external captcha state if provided, otherwise use internal state
   const isCaptchaValid = externalCaptchaValid ?? internalCaptchaValid;
   const handleCaptchaValidation = onValidationChange ?? setInternalCaptchaValid;
 
+  const validateForm = () => {
+    const errors = {
+      name: '',
+      email: '',
+      subject: '',
+      message: ''
+    };
+    let isValid = true;
+
+    if (!formData.name.trim()) {
+      errors.name = translateString(t, 'form.error.name', 'Please enter your name');
+      isValid = false;
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = translateString(t, 'form.error.email', 'Please enter your email');
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = translateString(t, 'form.error.invalidEmail', 'Please enter a valid email address');
+      isValid = false;
+    }
+
+    if (!formData.message.trim()) {
+      errors.message = translateString(t, 'form.error.message', 'Please enter your message');
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     if (!isCaptchaValid) {
       setStatus({
         success: false,
-        message: translateString(t, 'form.error.captcha', 'Please verify the captcha first.')
+        message: translateString(t, 'form.error.captcha', 'Please complete the captcha verification')
       });
       return;
     }
@@ -432,23 +480,32 @@ const ContactForm: React.FC<ContactFormProps> = ({
       if (response.ok) {
         setStatus({
           success: true,
-          message: translateString(t, 'form.success', 'Message sent successfully!')
+          message: translateString(t, 'form.error.success', 'Message sent successfully!')
         });
         setFormData({ name: '', email: '', subject: '', message: '' });
-        handleCaptchaValidation(false); // Reset captcha validation after successful submission
+        handleCaptchaValidation(false);
       } else {
         setStatus({
           success: false,
-          message: translateString(t, 'form.error', 'Failed to send message. Please try again.')
+          message: translateString(t, 'form.error.submit', 'Failed to send message. Please try again.')
         });
       }
     } catch (error) {
       setStatus({
         success: false,
-        message: translateString(t, 'form.error', 'Failed to send message. Please try again.')
+        message: translateString(t, 'form.error.submit', 'Failed to send message. Please try again.')
       });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof typeof formData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [field]: e.target.value });
+    if (fieldErrors[field]) {
+      setFieldErrors({ ...fieldErrors, [field]: '' });
     }
   };
 
@@ -458,48 +515,48 @@ const ContactForm: React.FC<ContactFormProps> = ({
   
   return (
     <FormCard>
-      <FormContainer onSubmit={handleSubmit}>
+      <FormContainer onSubmit={handleSubmit} noValidate>
         <FormGroup>
-          <Label>{translateReact(t, 'form.name.label', 'Name')}</Label>
+          <Label>{translateString(t, 'form.name.label', 'Name')}</Label>
           <Input
             type="text"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={handleInputChange('name')}
             placeholder={translateString(t, 'form.name.placeholder', 'Your name')}
-            required
           />
+          {fieldErrors.name && <ErrorMessage>{fieldErrors.name}</ErrorMessage>}
         </FormGroup>
         
         <FormGroup>
-          <Label>{translateReact(t, 'form.email.label', 'Email')}</Label>
+          <Label>{translateString(t, 'form.email.label', 'Email')}</Label>
           <Input
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={handleInputChange('email')}
             placeholder={translateString(t, 'form.email.placeholder', 'Your email address')}
-            required
           />
+          {fieldErrors.email && <ErrorMessage>{fieldErrors.email}</ErrorMessage>}
         </FormGroup>
         
         <FormGroup>
-          <Label>{translateReact(t, 'form.subject.label', 'Subject')}</Label>
+          <Label>{translateString(t, 'form.subject.label', 'Subject')}</Label>
           <Input
             type="text"
             value={formData.subject}
-            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+            onChange={handleInputChange('subject')}
             placeholder={translateString(t, 'form.subject.placeholder', 'Message subject')}
-            required
           />
+          {fieldErrors.subject && <ErrorMessage>{fieldErrors.subject}</ErrorMessage>}
         </FormGroup>
         
         <FormGroup>
-          <Label>{translateReact(t, 'form.message.label', 'Message')}</Label>
+          <Label>{translateString(t, 'form.message.label', 'Message')}</Label>
           <TextArea
             value={formData.message}
-            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            onChange={handleInputChange('message')}
             placeholder={translateString(t, 'form.message.placeholder', 'Your message')}
-            required
           />
+          {fieldErrors.message && <ErrorMessage>{fieldErrors.message}</ErrorMessage>}
         </FormGroup>
         
         {showCaptchaInForm && (
@@ -508,8 +565,8 @@ const ContactForm: React.FC<ContactFormProps> = ({
         
         <SubmitButton type="submit" disabled={isSending || !isCaptchaValid}>
           {isSending 
-            ? translateReact(t, 'form.submit.sending', 'Sending...')
-            : translateReact(t, 'form.submit.button', 'Send Message')
+            ? translateString(t, 'form.submit.sending', 'Sending...')
+            : translateString(t, 'form.submit.button', 'Send Message')
           }
         </SubmitButton>
         
@@ -519,7 +576,7 @@ const ContactForm: React.FC<ContactFormProps> = ({
           </StatusMessage>
         )}
         
-        <ServiceStatus>{translateReact(t, 'form.service.available', 'Email service is available')}</ServiceStatus>
+        <ServiceStatus>{translateString(t, 'form.service.available', 'Email service is available')}</ServiceStatus>
       </FormContainer>
     </FormCard>
   );

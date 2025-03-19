@@ -1,6 +1,6 @@
 {
   "title": "Contact Us",
-  "subtitle": "Have a question? We'd love to hear from you.",
+  "subtitle": "Get in touch with us",
   "form": {
     "name": {
       "label": "Name",
@@ -12,19 +12,27 @@
     },
     "subject": {
       "label": "Subject",
-      "placeholder": "What is this about?"
+      "placeholder": "Message subject"
     },
     "message": {
       "label": "Message",
       "placeholder": "Your message"
     },
     "submit": {
-      "button": "Send",
+      "button": "Send Message",
       "sending": "Sending..."
     },
-    "status": {
-      "success": "Thank you! Your message has been sent.",
-      "error": "Sorry, there was an error. Please try again."
+    "service": {
+      "available": "Email service is available"
+    },
+    "error": {
+      "name": "Please enter your name",
+      "email": "Please enter a valid email address",
+      "message": "Please enter your message",
+      "captcha": "Please complete the captcha verification",
+      "submit": "Failed to send message. Please try again.",
+      "success": "Message sent successfully!",
+      "invalidEmail": "Please enter a valid email address"
     }
   },
   "location": {

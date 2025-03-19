@@ -264,22 +264,6 @@ const Navbar: React.FC = () => {
         </MenuButton>
         
         <NavLinks isOpen={isOpen}>
-          <StyledNavLink to={getLangPath('/about')}>
-            <NavLinkContent>
-              <>
-                {t('nav.about', { defaultValue: 'About' })}
-                <ActiveIndicator isActive={isActive('/about')} />
-              </>
-            </NavLinkContent>
-          </StyledNavLink>
-          <StyledNavLink to={getLangPath('/projects')}>
-            <NavLinkContent>
-              <>
-                {t('nav.projects', { defaultValue: 'Projects' })}
-                <ActiveIndicator isActive={isActive('/projects')} />
-              </>
-            </NavLinkContent>
-          </StyledNavLink>
           <NavLinkButton onClick={() => handleNavigation('services')}>
             <NavLinkContent>
               <>
@@ -288,6 +272,22 @@ const Navbar: React.FC = () => {
               </>
             </NavLinkContent>
           </NavLinkButton>
+          <StyledNavLink to={getLangPath('/projects')}>
+            <NavLinkContent>
+              <>
+                {t('nav.projects', { defaultValue: 'Projects' })}
+                <ActiveIndicator isActive={isActive('/projects')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
+          <StyledNavLink to={getLangPath('/about')}>
+            <NavLinkContent>
+              <>
+                {t('nav.about', { defaultValue: 'About' })}
+                <ActiveIndicator isActive={isActive('/about')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
           <StyledNavLink to={getLangPath('/contact')}>
             <NavLinkContent>
               <>

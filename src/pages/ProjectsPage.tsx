@@ -319,36 +319,36 @@ const ProjectLink = styled.a`
 `;
 
 const ProjectsPage: React.FC = () => {
-  const { t } = useTranslation('projects');
-  const translate = t as unknown as ((key: string, defaultValue?: string) => React.ReactNode) & ((key: string, defaultValue?: string) => string);
-  const translateString = (key: string, defaultValue: string = '') => translate(key, defaultValue) as string;
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string>('');
-  const [headerVisible, setHeaderVisible] = useState(false);
-  const [projectsVisible, setProjectsVisible] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
-
+  const { t: translate, i18n } = useTranslation('projects');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isVisible, setIsVisible] = useState(false);
+  const [isCardsVisible, setIsCardsVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ src: string; key: string } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  usePreserveScroll(i18n);
+  
   useEffect(() => {
-    const handleScroll = () => {
-      const headerElement = document.getElementById('projects-header');
-      const projectsElement = document.getElementById('projects-grid');
-      
-      if (headerElement) {
-        const headerRect = headerElement.getBoundingClientRect();
-        setHeaderVisible(headerRect.top < window.innerHeight * 0.8);
-      }
-      
-      if (projectsElement) {
-        const projectsRect = projectsElement.getBoundingClientRect();
-        setProjectsVisible(projectsRect.top < window.innerHeight * 0.8);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial check
-
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Set visibility to true immediately on mount
+    setIsVisible(true);
+    // Start with cards invisible
+    setIsCardsVisible(false);
+    // Trigger card animations after a short delay
+    const timer = setTimeout(() => {
+      setIsCardsVisible(true);
+    }, 800); // Match the delay with the header animations
+    return () => clearTimeout(timer);
   }, []);
+
+  // Handle category changes without refreshing the page
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setIsCardsVisible(false);
+    const timer = setTimeout(() => {
+      setIsCardsVisible(true);
+    }, 50);
+    return () => clearTimeout(timer);
+  };
 
   const projects = [
     {
@@ -393,84 +393,82 @@ const ProjectsPage: React.FC = () => {
     { id: 'mobile', label: translate('filters.mobile', 'Mobile') }
   ];
   
-  const filteredProjects = activeFilter === 'all' 
+  const filteredProjects = selectedCategory === 'all' 
     ? projects 
-    : projects.filter(project => project.category === activeFilter);
+    : projects.filter(project => project.category === selectedCategory);
     
   const handleImageClick = (imageSrc: string, key: string) => {
-    setSelectedImage(imageSrc);
-    setSelectedTitle(key);
+    setSelectedImage({ src: imageSrc, key });
   };
   
   const closeModal = () => {
     setSelectedImage(null);
-    setSelectedTitle('');
   };
   
   return (
     <>
-      <ProjectsContainer>
+      <ProjectsContainer ref={containerRef}>
         <ProjectsHeader id="projects-header">
-          <ProjectsTitle isVisible={headerVisible}>{translate('title', 'Our Projects')}</ProjectsTitle>
-          <ProjectsSubtitle isVisible={headerVisible}>
-            {translate('subtitle', 'Discover our portfolio of successful digital solutions')}
+          <ProjectsTitle isVisible={isVisible}>{translate('title', 'Our Projects') as string}</ProjectsTitle>
+          <ProjectsSubtitle isVisible={isVisible}>
+            {translate('subtitle', 'Discover our portfolio of successful digital solutions') as string}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
-        <FilterContainer isVisible={headerVisible}>
+        <FilterContainer isVisible={isVisible}>
           {filters.map(filter => (
             <FilterButton 
               key={filter.id} 
-              active={activeFilter === filter.id}
-              onClick={() => setActiveFilter(filter.id)}
+              active={selectedCategory === filter.id}
+              onClick={() => handleCategoryChange(filter.id)}
             >
-              {filter.label}
+              {filter.label as string}
             </FilterButton>
           ))}
         </FilterContainer>
         
-        <ProjectsGrid id="projects-grid" isVisible={projectsVisible}>
+        <ProjectsGrid id="projects-grid" isVisible={isVisible}>
           {filteredProjects.map((project, index) => {
             const position = getRandomPosition(index);
             return (
               <ProjectCard 
                 key={project.id} 
-                isVisible={projectsVisible}
+                isVisible={isCardsVisible}
                 index={index}
                 x={position.x}
                 y={position.y}
                 rotate={position.rotate}
               >
                 <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
-                  <img src={project.image} alt={translateString(`projects.${project.key}.title`, '')} />
+                  <img src={project.image} alt={translate(`projects.${project.key}.title`, '') as string} />
                 </ProjectImage>
                 <ProjectContent>
-                  <ProjectCategory>{filters.find(f => f.id === project.category)?.label}</ProjectCategory>
-                  <ProjectTitle>{translate(`projects.${project.key}.title`, '')}</ProjectTitle>
+                  <ProjectCategory>{filters.find(f => f.id === project.category)?.label as string}</ProjectCategory>
+                  <ProjectTitle>{translate(`projects.${project.key}.title`, '') as string}</ProjectTitle>
                   <StatusContainer>
                     <StatusDot status={project.status} />
                     <StatusText>
-                      {translate(`status.${project.status}`, '')}
+                      {translate(`status.${project.status}`, '') as string}
                     </StatusText>
                   </StatusContainer>
-                  <ProjectDescription>{translate(`projects.${project.key}.description`, '')}</ProjectDescription>
+                  <ProjectDescription>{translate(`projects.${project.key}.description`, '') as string}</ProjectDescription>
                   <ProjectLinks>
                     {project.link && project.link.includes('github') && (
                       <GitHubLink href={project.link} target="_blank" rel="noopener noreferrer" title="View on GitHub">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                         </svg>
-                        <span>{translate('actions.viewOnGitHub', 'View on GitHub')}</span>
+                        <span>{translate('actions.viewOnGitHub', 'View on GitHub') as string}</span>
                       </GitHubLink>
                     )}
                     {project.link && !project.link.includes('github') && project.link !== '#' && (
                       <ProjectLink href={project.link} target="_blank" rel="noopener noreferrer">
-                        {translate('actions.viewProject', 'View Project')}
+                        {translate('actions.viewProject', 'View Project') as string}
                       </ProjectLink>
                     )}
                     {project.demoLink && (
                       <DemoButton href={project.demoLink} target="_blank" rel="noopener noreferrer">
-                        {translate('actions.demo', 'Live Demo')}
+                        {translate('actions.demo', 'Live Demo') as string}
                       </DemoButton>
                     )}
                   </ProjectLinks>
@@ -482,7 +480,10 @@ const ProjectsPage: React.FC = () => {
       </ProjectsContainer>
       
       <Modal isOpen={!!selectedImage} onClose={closeModal}>
-        <ModalImage src={selectedImage || ''} alt={translateString(`projects.${selectedTitle}.title`, '')} />
+        <ModalImage 
+          src={selectedImage?.src || ''} 
+          alt={selectedImage?.key ? (translate(`projects.${selectedImage.key}.title`, '') as string) : ''} 
+        />
       </Modal>
       
       <CallToAction />

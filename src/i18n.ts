@@ -4,15 +4,25 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import Backend from 'i18next-http-backend';
 import { InitOptions } from 'i18next';
 
+// Get the initial language from the URL path
+const getInitialLanguage = () => {
+  const path = window.location.pathname;
+  if (path.startsWith('/fr/')) {
+    return 'fr';
+  }
+  return 'en';
+};
+
 const config: InitOptions = {
-  fallbackLng: 'fr',
+  fallbackLng: 'en',
   supportedLngs: ['fr', 'en'],
   defaultNS: 'common',
   ns: ['common', 'about', 'home', 'contact', 'projects', 'services'],
 
   detection: {
-    order: ['navigator', 'htmlTag', 'path', 'subdomain'],
-    lookupFromPathIndex: 0,
+    order: ['path', 'localStorage', 'navigator'],
+    lookupFromPathIndex: 2,
+    caches: ['localStorage'],
   },
 
   interpolation: {
@@ -26,6 +36,8 @@ const config: InitOptions = {
   react: {
     useSuspense: true,
   },
+
+  lng: getInitialLanguage(),
 };
 
 i18n
