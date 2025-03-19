@@ -4,8 +4,8 @@ import App from './App';
 import './i18n';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import theme from './theme';
-import GlobalStyle from './GlobalStyle';
+import { theme } from './styles/theme';
+import GlobalStyle from './styles/GlobalStyles';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

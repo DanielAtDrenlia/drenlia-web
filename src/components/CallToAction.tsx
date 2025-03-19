@@ -59,19 +59,30 @@ const CTAButton = styled(Link)`
   }
 `;
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'home', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'home', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const CallToAction: React.FC = () => {
   const { t, i18n } = useTranslation('home');
-  const translate = t as TFunction<'home', undefined>;
   
   return (
     <CTAContainer>
       <CTAContent>
-        <CTATitle>{translate('cta.title', 'Ready to Transform Your Digital Presence?')}</CTATitle>
+        <CTATitle>
+          {translateReact(t, 'cta.title', 'Ready to Transform Your Digital Presence?')}
+        </CTATitle>
         <CTAText>
-          {translate('cta.description', 'Let\'s discuss how we can help you achieve your goals and take your business to the next level.')}
+          {translateReact(t, 'cta.description', 'Let\'s discuss how we can help you achieve your goals and take your business to the next level.')}
         </CTAText>
         <CTAButton to={`/${i18n.language}/contact`}>
-          {translate('cta.button', 'Get Started')}
+          {translateReact(t, 'cta.button', 'Get Started')}
         </CTAButton>
       </CTAContent>
     </CTAContainer>

@@ -17,6 +17,12 @@ declare module 'i18next' {
       contact: {
         translation: Record<string, string>;
       };
+      about: {
+        translation: Record<string, string>;
+      };
+      services: {
+        translation: Record<string, string>;
+      };
     };
   }
 }

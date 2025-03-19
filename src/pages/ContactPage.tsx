@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import ContactForm from '../components/ContactForm';
 import { useTranslation } from 'react-i18next';
 import { FaMapMarkerAlt } from 'react-icons/fa';
+import type { IconBaseProps } from 'react-icons';
+import ContactForm from '../components/ContactForm';
 import { usePreserveScroll } from '../hooks/usePreserveScroll';
+
+// Create a proper type for the icon component
+const MapMarkerIcon = (props: IconBaseProps) => {
+  const Icon = FaMapMarkerAlt as React.ComponentType<IconBaseProps>;
+  return <Icon {...props} />;
+};
 
 const ContactContainer = styled.div`
   max-width: 1200px;
@@ -91,32 +98,33 @@ const InfoText = styled.p`
 const ContactPage: React.FC = () => {
   const { t, i18n } = useTranslation('contact');
   usePreserveScroll(i18n);
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   
   return (
     <ContactContainer>
       <ContactHeader>
-        <ContactTitle>{t('title')}</ContactTitle>
+        <ContactTitle>{t('title', 'Contact Us') as string}</ContactTitle>
         <ContactSubtitle>
-          {t('subtitle')}
+          {t('subtitle', 'Get in touch with us for any questions or inquiries') as string}
         </ContactSubtitle>
       </ContactHeader>
       
       <ContactContent>
-        <ContactForm showCaptchaInForm={false} />
+        <ContactForm showCaptchaInForm={false} isCaptchaValid={isCaptchaValid} />
         
         <RightColumn>
           <LocationCard>
             <InfoItem>
               <IconWrapper>
-                <FaMapMarkerAlt />
+                <MapMarkerIcon size={24} color="white" />
               </IconWrapper>
               <InfoContent>
-                <InfoTitle>{t('location.title')}</InfoTitle>
+                <InfoTitle>{t('location.title', 'Our Location') as string}</InfoTitle>
                 <InfoText>7037, rue des Tournesols{'\n'}Saint-Hubert, QC J3Y 8S2</InfoText>
               </InfoContent>
             </InfoItem>
           </LocationCard>
-          <ContactForm showCaptchaOnly />
+          <ContactForm showCaptchaOnly onValidationChange={setIsCaptchaValid} />
         </RightColumn>
       </ContactContent>
     </ContactContainer>

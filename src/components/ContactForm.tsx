@@ -1,7 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { BiRefresh } from 'react-icons/bi';
+import type { IconBaseProps } from 'react-icons';
 import { API_URL } from '../services/emailService';
 
 const FormCard = styled.div`
@@ -164,6 +166,12 @@ const ButtonsContainer = styled.div`
   gap: 1rem;
 `;
 
+// Create a proper type for the icon component
+const RefreshIcon = (props: IconBaseProps) => {
+  const Icon = BiRefresh as React.ComponentType<IconBaseProps>;
+  return <Icon {...props} />;
+};
+
 const RefreshButton = styled.button`
   background: none;
   border: none;
@@ -171,10 +179,27 @@ const RefreshButton = styled.button`
   cursor: pointer;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
   
   &:hover {
-    text-decoration: underline;
+    background-color: rgba(231, 76, 60, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+  }
+  
+  &:hover svg {
+    transform: rotate(180deg);
   }
 `;
 
@@ -213,10 +238,19 @@ const CaptchaStatus = styled.div<{ $isValid: boolean | null }>`
   }
 `;
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'contact'>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'contact'>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 // Captcha Component
 const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({ onValidationChange }) => {
   const { t } = useTranslation('contact');
-  const translate = t as TFunction<'contact', undefined>;
   const [captchaImage, setCaptchaImage] = useState<string>('');
   const [captchaInput, setCaptchaInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -224,38 +258,31 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
-  const loadCaptcha = React.useCallback(async () => {
-    if (isValid === true) return;
-    
+  const loadCaptcha = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/captcha-data-url`, {
         credentials: 'include'
       });
+      const data = await response.json();
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.dataUrl) {
-          setCaptchaImage(data.dataUrl);
-          setCaptchaInput('');
-          setIsValid(null);
-          setErrorMessage('');
-          onValidationChange(false);
-        } else {
-          setErrorMessage(translate('captcha.error', 'Error loading captcha'));
-        }
+      if (response.ok && data.dataUrl) {
+        setCaptchaImage(data.dataUrl);
+        setCaptchaInput('');
+        setIsValid(null);
+        setErrorMessage('');
+        onValidationChange(false);
       } else {
-        setErrorMessage(translate('captcha.error', 'Error loading captcha'));
+        setErrorMessage(translateString(t, 'captcha.error.load', 'Failed to load captcha'));
       }
     } catch (error) {
-      console.error('Captcha loading error:', error);
-      setErrorMessage(translate('captcha.error', 'Error loading captcha'));
+      setErrorMessage(translateString(t, 'captcha.error.load', 'Failed to load captcha'));
     } finally {
       setIsLoading(false);
     }
-  }, [isValid, onValidationChange, translate]);
+  }, [t, onValidationChange]);
   
-  React.useEffect(() => {
+  useEffect(() => {
     loadCaptcha();
   }, [loadCaptcha]);
   
@@ -263,26 +290,31 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
     if (!captchaInput.trim() || isVerifying) return;
     
     setIsVerifying(true);
+    setErrorMessage('');
+    
     try {
       const response = await fetch(`${API_URL}/verify-captcha`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ captchaInput: captchaInput.trim() }),
         credentials: 'include'
       });
       
-      const result = await response.json();
-      setIsValid(result.success);
-      setErrorMessage(result.success ? '' : translate('captcha.invalid'));
-      onValidationChange(result.success);
+      const data = await response.json();
       
-      if (!result.success) {
-        setTimeout(loadCaptcha, 1500);
+      if (response.ok && data.success) {
+        setIsValid(true);
+        onValidationChange(true);
+      } else {
+        setIsValid(false);
+        onValidationChange(false);
+        setErrorMessage(t('captcha.invalid', 'Incorrect code, please try again') as string);
       }
     } catch (error) {
-      console.error('Verification error:', error);
+      setErrorMessage(t('captcha.error', 'Error loading captcha. Please try again.') as string);
       setIsValid(false);
-      setErrorMessage(translate('captcha.error', 'Error verifying captcha'));
       onValidationChange(false);
     } finally {
       setIsVerifying(false);
@@ -291,65 +323,55 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
   
   return (
     <CaptchaCard>
-      <CaptchaTitle>{translate('captcha.title')}</CaptchaTitle>
-      
+      <CaptchaTitle>{t('captcha.title', 'Security Check') as string}</CaptchaTitle>
       <CaptchaImageContainer>
-        {isLoading && <CaptchaLoading>{translate('captcha.loading')}</CaptchaLoading>}
-        {!isLoading && captchaImage && (
-          <img 
-            src={captchaImage} 
-            alt="Captcha" 
-            style={{ maxWidth: '100%', height: 'auto' }} 
-          />
+        {isLoading ? (
+          <CaptchaLoading>{t('captcha.loading', 'Loading captcha...') as string}</CaptchaLoading>
+        ) : (
+          <img src={captchaImage} alt={t('captcha.alt', 'CAPTCHA image') as string} />
         )}
       </CaptchaImageContainer>
       
-      <CaptchaInput 
-        type="text" 
+      <CaptchaInput
+        type="text"
         value={captchaInput}
         onChange={(e) => setCaptchaInput(e.target.value)}
         onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-        placeholder={translate('captcha.placeholder')}
-        disabled={isValid === true}
+        placeholder={t('captcha.placeholder', 'Enter the text shown above') as string}
+        disabled={isVerifying || isValid === true}
       />
       
       <ButtonsContainer>
-        <RefreshButton 
-          type="button" 
+        <RefreshButton
+          type="button"
           onClick={loadCaptcha}
-          disabled={isValid === true}
+          disabled={isVerifying || isLoading}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}>
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-          </svg>
-          {translate('captcha.refresh')}
+          <RefreshIcon size={20} color="currentColor" />
+          {t('captcha.refresh', 'Refresh') as string}
         </RefreshButton>
         
-        <VerifyButton 
-          type="button" 
+        <VerifyButton
+          type="button"
           onClick={handleVerify}
-          disabled={isVerifying || !captchaInput.trim() || isValid === true}
+          disabled={!captchaInput.trim() || isVerifying || isValid === true}
         >
-          {isVerifying ? translate('captcha.verifying') : isValid === true ? translate('captcha.valid') : translate('captcha.verify')}
+          {isVerifying
+            ? t('captcha.verifying', 'Verifying...') as string
+            : t('captcha.verify', 'Verify') as string
+          }
         </VerifyButton>
       </ButtonsContainer>
       
-      {(isValid !== null || errorMessage) && (
-        <CaptchaStatus $isValid={isValid}>
-          {isValid ? (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-              {translate('captcha.valid')}
-            </>
-          ) : (
-            errorMessage
-          )}
+      {errorMessage && (
+        <CaptchaStatus $isValid={false}>
+          {errorMessage}
+        </CaptchaStatus>
+      )}
+      
+      {isValid === true && (
+        <CaptchaStatus $isValid={true}>
+          {t('captcha.valid', 'Verification successful') as string}
         </CaptchaStatus>
       )}
     </CaptchaCard>
@@ -359,11 +381,17 @@ const Captcha: React.FC<{ onValidationChange: (isValid: boolean) => void }> = ({
 interface ContactFormProps {
   showCaptchaOnly?: boolean;
   showCaptchaInForm?: boolean;
+  isCaptchaValid?: boolean;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
-const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, showCaptchaInForm = true }) => {
+const ContactForm: React.FC<ContactFormProps> = ({ 
+  showCaptchaOnly = false, 
+  showCaptchaInForm = true,
+  isCaptchaValid: externalCaptchaValid,
+  onValidationChange 
+}) => {
   const { t } = useTranslation('contact');
-  const translate = t as TFunction<'contact', undefined>;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -371,47 +399,53 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
     message: ''
   });
   const [isSending, setIsSending] = useState(false);
-  const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
-  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
+  const [status, setStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [internalCaptchaValid, setInternalCaptchaValid] = useState(false);
   
+  // Use external captcha state if provided, otherwise use internal state
+  const isCaptchaValid = externalCaptchaValid ?? internalCaptchaValid;
+  const handleCaptchaValidation = onValidationChange ?? setInternalCaptchaValid;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!isCaptchaValid) {
       setStatus({
-        message: translate('captcha.error', 'Please complete the captcha'),
-        isError: true
+        success: false,
+        message: translateString(t, 'form.error.captcha', 'Please verify the captcha first.')
       });
       return;
     }
-    
+
     setIsSending(true);
     setStatus(null);
-    
+
     try {
       const response = await fetch(`${API_URL}/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData),
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         setStatus({
-          message: translate('form.status.success'),
-          isError: false
+          success: true,
+          message: translateString(t, 'form.success', 'Message sent successfully!')
         });
         setFormData({ name: '', email: '', subject: '', message: '' });
+        handleCaptchaValidation(false); // Reset captcha validation after successful submission
       } else {
         setStatus({
-          message: translate('form.status.error'),
-          isError: true
+          success: false,
+          message: translateString(t, 'form.error', 'Failed to send message. Please try again.')
         });
       }
     } catch (error) {
       setStatus({
-        message: translate('form.status.error'),
-        isError: true
+        success: false,
+        message: translateString(t, 'form.error', 'Failed to send message. Please try again.')
       });
     } finally {
       setIsSending(false);
@@ -419,72 +453,75 @@ const ContactForm: React.FC<ContactFormProps> = ({ showCaptchaOnly = false, show
   };
 
   if (showCaptchaOnly) {
-    return <Captcha onValidationChange={setIsCaptchaValid} />;
+    return <Captcha onValidationChange={handleCaptchaValidation} />;
   }
   
   return (
-    <div>
-      <FormCard>
-        <FormContainer onSubmit={handleSubmit}>
+    <FormCard>
+      <FormContainer onSubmit={handleSubmit}>
         <FormGroup>
-            <Label>{translate('form.name.label')}</Label>
+          <Label>{translateReact(t, 'form.name.label', 'Name')}</Label>
           <Input
             type="text"
             value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={translate('form.name.placeholder')}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder={translateString(t, 'form.name.placeholder', 'Your name')}
             required
           />
         </FormGroup>
         
         <FormGroup>
-            <Label>{translate('form.email.label')}</Label>
+          <Label>{translateReact(t, 'form.email.label', 'Email')}</Label>
           <Input
             type="email"
             value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={translate('form.email.placeholder')}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder={translateString(t, 'form.email.placeholder', 'Your email address')}
             required
           />
         </FormGroup>
         
         <FormGroup>
-            <Label>{translate('form.subject.label')}</Label>
+          <Label>{translateReact(t, 'form.subject.label', 'Subject')}</Label>
           <Input
             type="text"
             value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              placeholder={translate('form.subject.placeholder')}
-              required
-          />
-        </FormGroup>
-        
-        <FormGroup>
-            <Label>{translate('form.message.label')}</Label>
-          <TextArea
-            value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder={translate('form.message.placeholder')}
+            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+            placeholder={translateString(t, 'form.subject.placeholder', 'Message subject')}
             required
           />
         </FormGroup>
         
-          <SubmitButton type="submit" disabled={isSending || !isCaptchaValid}>
-            {isSending ? translate('form.submit.sending') : translate('form.submit.button')}
+        <FormGroup>
+          <Label>{translateReact(t, 'form.message.label', 'Message')}</Label>
+          <TextArea
+            value={formData.message}
+            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            placeholder={translateString(t, 'form.message.placeholder', 'Your message')}
+            required
+          />
+        </FormGroup>
+        
+        {showCaptchaInForm && (
+          <Captcha onValidationChange={handleCaptchaValidation} />
+        )}
+        
+        <SubmitButton type="submit" disabled={isSending || !isCaptchaValid}>
+          {isSending 
+            ? translateReact(t, 'form.submit.sending', 'Sending...')
+            : translateReact(t, 'form.submit.button', 'Send Message')
+          }
         </SubmitButton>
-          
-          {status && (
-            <StatusMessage $isError={status.isError}>
-              {status.message}
-            </StatusMessage>
-          )}
-          
-          <ServiceStatus>Email service is available</ServiceStatus>
-    </FormContainer>
-      </FormCard>
-      
-      {showCaptchaInForm && <Captcha onValidationChange={setIsCaptchaValid} />}
-    </div>
+        
+        {status && (
+          <StatusMessage $isError={!status.success}>
+            {status.message}
+          </StatusMessage>
+        )}
+        
+        <ServiceStatus>{translateReact(t, 'form.service.available', 'Email service is available')}</ServiceStatus>
+      </FormContainer>
+    </FormCard>
   );
 };
 

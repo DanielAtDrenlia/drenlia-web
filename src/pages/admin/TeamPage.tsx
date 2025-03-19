@@ -12,7 +12,7 @@ interface TeamMemberForm {
   fr_title: string;
   bio: string;
   fr_bio: string;
-  image_url: string;
+  image_url?: string;
   email: string;
   display_order: number;
 }

@@ -17,11 +17,23 @@ const UsersPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+
+  interface UserFormData {
+    first_name: string;
+    last_name: string;
+    email: string;
+    admin: boolean;
+    password?: string;
+    confirmPassword?: string;
+  }
+
+  const [formData, setFormData] = useState<UserFormData>({
     first_name: '',
     last_name: '',
     email: '',
-    admin: false
+    admin: false,
+    password: '',
+    confirmPassword: ''
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -51,7 +63,9 @@ const UsersPage: React.FC = () => {
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      admin: user.admin
+      admin: user.admin,
+      password: '',
+      confirmPassword: ''
     });
     setIsEditModalOpen(true);
   };
@@ -62,7 +76,9 @@ const UsersPage: React.FC = () => {
       first_name: '',
       last_name: '',
       email: '',
-      admin: false
+      admin: false,
+      password: '',
+      confirmPassword: ''
     });
     setIsAddModalOpen(true);
   };

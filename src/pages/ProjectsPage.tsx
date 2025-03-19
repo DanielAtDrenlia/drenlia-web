@@ -108,10 +108,16 @@ const FilterButton = styled.button<{ active: boolean }>`
   }
 `;
 
-const ProjectsGrid = styled.div`
+const ProjectsGrid = styled.div<{ isVisible: boolean }>`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
+  opacity: 0;
+  
+  ${({ isVisible }) => isVisible && css`
+    animation: ${fadeIn} 1s ease forwards;
+    animation-delay: 0.8s;
+  `}
 `;
 
 // Generate random starting positions for cards
@@ -313,57 +319,37 @@ const ProjectLink = styled.a`
 `;
 
 const ProjectsPage: React.FC = () => {
-  const { t, i18n } = useTranslation('projects');
-  const translate = t as TFunction<'projects', undefined>;
-  usePreserveScroll(i18n as i18n);
-
-  const [activeFilter, setActiveFilter] = useState('all');
+  const { t } = useTranslation('projects');
+  const translate = t as unknown as ((key: string, defaultValue?: string) => React.ReactNode) & ((key: string, defaultValue?: string) => string);
+  const translateString = (key: string, defaultValue: string = '') => translate(key, defaultValue) as string;
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+  const [selectedTitle, setSelectedTitle] = useState<string>('');
   const [headerVisible, setHeaderVisible] = useState(false);
   const [projectsVisible, setProjectsVisible] = useState(false);
-  
-  const headerRef = useRef<HTMLDivElement>(null);
-  const projectsGridRef = useRef<HTMLDivElement>(null);
-  
+  const [activeFilter, setActiveFilter] = useState('all');
+
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.2,
-    };
-    
-    // Create observers for header and projects grid
-    const headerObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setHeaderVisible(true);
-        headerObserver.disconnect();
+    const handleScroll = () => {
+      const headerElement = document.getElementById('projects-header');
+      const projectsElement = document.getElementById('projects-grid');
+      
+      if (headerElement) {
+        const headerRect = headerElement.getBoundingClientRect();
+        setHeaderVisible(headerRect.top < window.innerHeight * 0.8);
       }
-    }, observerOptions);
-    
-    const projectsObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setProjectsVisible(true);
-        projectsObserver.disconnect();
+      
+      if (projectsElement) {
+        const projectsRect = projectsElement.getBoundingClientRect();
+        setProjectsVisible(projectsRect.top < window.innerHeight * 0.8);
       }
-    }, observerOptions);
-    
-    // Observe elements
-    if (headerRef.current) {
-      headerObserver.observe(headerRef.current);
-    }
-    
-    if (projectsGridRef.current) {
-      projectsObserver.observe(projectsGridRef.current);
-    }
-    
-    // Cleanup
-    return () => {
-      headerObserver.disconnect();
-      projectsObserver.disconnect();
     };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
   const projects = [
     {
       id: 1,
@@ -411,25 +397,23 @@ const ProjectsPage: React.FC = () => {
     ? projects 
     : projects.filter(project => project.category === activeFilter);
     
-  // Generate random positions for each project card
-  const cardPositions = Array(projects.length).fill(0).map((_, index) => getRandomPosition(index));
-  
   const handleImageClick = (imageSrc: string, key: string) => {
     setSelectedImage(imageSrc);
-    setSelectedTitle(translate(`projects.${key}.title`, ''));
+    setSelectedTitle(key);
   };
   
   const closeModal = () => {
     setSelectedImage(null);
+    setSelectedTitle('');
   };
   
   return (
     <>
       <ProjectsContainer>
-        <ProjectsHeader ref={headerRef}>
+        <ProjectsHeader id="projects-header">
           <ProjectsTitle isVisible={headerVisible}>{translate('title', 'Our Projects')}</ProjectsTitle>
           <ProjectsSubtitle isVisible={headerVisible}>
-            {translate('subtitle', 'Explore our portfolio of innovative solutions and successful implementations.')}
+            {translate('subtitle', 'Discover our portfolio of successful digital solutions')}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
@@ -445,9 +429,9 @@ const ProjectsPage: React.FC = () => {
           ))}
         </FilterContainer>
         
-        <ProjectsGrid ref={projectsGridRef}>
+        <ProjectsGrid id="projects-grid" isVisible={projectsVisible}>
           {filteredProjects.map((project, index) => {
-            const position = cardPositions[projects.findIndex(p => p.id === project.id)];
+            const position = getRandomPosition(index);
             return (
               <ProjectCard 
                 key={project.id} 
@@ -458,7 +442,7 @@ const ProjectsPage: React.FC = () => {
                 rotate={position.rotate}
               >
                 <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
-                  <img src={project.image} alt={translate(`projects.${project.key}.title`, '')} />
+                  <img src={project.image} alt={translateString(`projects.${project.key}.title`, '')} />
                 </ProjectImage>
                 <ProjectContent>
                   <ProjectCategory>{filters.find(f => f.id === project.category)?.label}</ProjectCategory>
@@ -476,7 +460,7 @@ const ProjectsPage: React.FC = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                         </svg>
-                        {translate('actions.viewOnGitHub', 'View on GitHub')}
+                        <span>{translate('actions.viewOnGitHub', 'View on GitHub')}</span>
                       </GitHubLink>
                     )}
                     {project.link && !project.link.includes('github') && project.link !== '#' && (
@@ -498,7 +482,7 @@ const ProjectsPage: React.FC = () => {
       </ProjectsContainer>
       
       <Modal isOpen={!!selectedImage} onClose={closeModal}>
-        <ModalImage src={selectedImage || ''} alt={translate(`projects.${selectedTitle}.title`, '')} />
+        <ModalImage src={selectedImage || ''} alt={translateString(`projects.${selectedTitle}.title`, '')} />
       </Modal>
       
       <CallToAction />

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import ObfuscatedEmail from './ObfuscatedEmail';
 
 const FooterContainer = styled.footer`
   background-color: var(--primary-color);
@@ -205,128 +208,80 @@ const FooterBottom = styled.div`
   gap: 1rem;
 `;
 
-/**
- * ObfuscatedEmail component that prevents easy copy-pasting
- * by splitting the email into parts and using CSS to display it
- */
-const ObfuscatedEmail: React.FC = () => {
-  const [tooltipText, setTooltipText] = useState("Click to copy email");
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  
-  // Email parts stored separately to avoid easy scraping
-  const emailUser = "info";
-  const emailDomain = "drenlia.com";
-  
-  const handleCopyEmail = () => {
-    // Assemble the email only when clicked
-    const email = `${emailUser}@${emailDomain}`;
-    
-    // Use the clipboard API to copy the email
-    navigator.clipboard.writeText(email)
-      .then(() => {
-        setTooltipText("Email copied!");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      })
-      .catch(() => {
-        setTooltipText("Failed to copy");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      });
-  };
-  
-  const handleMouseEnter = () => {
-    setTooltipText("Click to copy email");
-    setTooltipVisible(true);
-  };
-  
-  const handleMouseLeave = () => {
-    setTooltipVisible(false);
-  };
-  
-  return (
-    <EmailContainer 
-      onClick={handleCopyEmail}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      aria-label="Click to copy email address"
-    >
-      <Tooltip visible={tooltipVisible}>{tooltipText}</Tooltip>
-      <span style={{ display: 'none' }}>email-protected</span>
-      <EmailPart>i</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>f</EmailPart>
-      <EmailPart>o</EmailPart>
-      <EmailSymbol>@</EmailSymbol>
-      <EmailPart>d</EmailPart>
-      <EmailPart>r</EmailPart>
-      <EmailPart>e</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>l</EmailPart>
-      <EmailPart>i</EmailPart>
-      <EmailPart>a</EmailPart>
-      <EmailPart>.</EmailPart>
-      <EmailPart>c</EmailPart>
-      <EmailPart>o</EmailPart>
-      <EmailPart>m</EmailPart>
-    </EmailContainer>
-  );
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'common', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'common', undefined>, key: string, defaultValue: string, options?: Record<string, any>): React.ReactNode => {
+  return t(key, { ...options, defaultValue });
 };
 
 const Footer: React.FC = () => {
   const { t, i18n } = useTranslation('common');
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <FooterContainer>
       <FooterContent>
         <FooterSection>
-          <FooterTitle>{t('footer.about.title', 'About Us')}</FooterTitle>
+          <FooterTitle>
+            {translateReact(t, 'footer.about.title', 'About Us')}
+          </FooterTitle>
           <FooterText>
-          {t('footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
+            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
           </FooterText>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.links.title')}</FooterTitle>
+          <FooterTitle>
+            {translateReact(t, 'footer.links.title', 'Quick Links')}
+          </FooterTitle>
           <FooterLinks>
-            <FooterLink to={`/${i18n.language}`}>{t('nav.home')}</FooterLink>
-            <FooterLink to={`/${i18n.language}/about`}>{t('nav.about')}</FooterLink>
-            <FooterLink to={`/${i18n.language}/services`}>{t('nav.services')}</FooterLink>
-            <FooterLink to={`/${i18n.language}/contact`}>{t('nav.contact')}</FooterLink>
+            <FooterLink to={`/${i18n.language}`}>
+              {translateReact(t, 'nav.home', 'Home')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/about`}>
+              {translateReact(t, 'nav.about', 'About')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/services`}>
+              {translateReact(t, 'nav.services', 'Services')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/contact`}>
+              {translateReact(t, 'nav.contact', 'Contact')}
+            </FooterLink>
           </FooterLinks>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.contact.title')}</FooterTitle>
+          <FooterTitle>
+            {translateReact(t, 'footer.contact.title', 'Contact Us')}
+          </FooterTitle>
           <ContactInfo>
             <ContactItem>
               <ContactLabel>Email:</ContactLabel> <ObfuscatedEmail />
             </ContactItem>
             <ContactItem>
-              <PhoneContainer data-tooltip={t('footer.contact.phone_tooltip')}>{t('footer.contact.phone')}</PhoneContainer>
+              <PhoneContainer data-tooltip={translateString(t, 'footer.contact.phone_tooltip', 'Click to call')}>
+                {translateReact(t, 'footer.contact.phone', '+1 (555) 123-4567')}
+              </PhoneContainer>
             </ContactItem>
             <ContactItem>
               <AddressContainer>
-                {t('footer.contact.address').split('\n').map((line, index) => (
-                  <AddressLine key={index}>{line}</AddressLine>
-                ))}
+                {(translateString(t, 'footer.contact.address', '123 Business Street\nSuite 100\nCity, State 12345'))
+                  .split('\n')
+                  .map((line: string, index: number) => (
+                    <AddressLine key={index}>{line}</AddressLine>
+                  ))}
               </AddressContainer>
             </ContactItem>
           </ContactInfo>
         </FooterSection>
       </FooterContent>
-      
+
       <Copyright>
-        {t('footer.copyright', { year: currentYear })}
+        {translateReact(t, 'footer.copyright', '© {{year}} Drenlia. All rights reserved.', { year: currentYear })}
       </Copyright>
     </FooterContainer>
   );

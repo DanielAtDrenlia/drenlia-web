@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const HeroContainer = styled.section`
   height: 80vh;
@@ -140,25 +141,33 @@ const SecondaryButton = styled(Link)`
   }
 `;
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'home', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'home', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const Hero: React.FC = () => {
   const { t, i18n } = useTranslation('home');
   const videoRef = useRef<HTMLVideoElement>(null);
   
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.playbackRate = 0.5; // Set playback speed to 75%
+      videoRef.current.playbackRate = 0.5;
     }
   }, []);
   
   const scrollToServices = () => {
     const servicesSection = document.getElementById('services-section');
     if (servicesSection) {
-      // Set a flag in sessionStorage to indicate we're scrolling to services
-      sessionStorage.setItem('scrollToServices', 'true');
       servicesSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
-  
+
   return (
     <HeroContainer>
       <VideoBackground autoPlay loop muted playsInline ref={videoRef}>
@@ -167,19 +176,21 @@ const Hero: React.FC = () => {
       </VideoBackground>
       <Overlay />
       <HeroContent>
-        <HeroTitle>{t('hero.title')}</HeroTitle>
+        <HeroTitle>
+          {translateReact(t, 'hero.title', 'Welcome to Drenlia')}
+        </HeroTitle>
         <HeroSubtitle>
-          {t('hero.subtitle')}
+          {translateReact(t, 'hero.subtitle', 'Your Digital Solutions Partner')}
         </HeroSubtitle>
         <HeroButtons>
           <ServicesButton onClick={scrollToServices}>
-            {t('hero.buttons.services')}
+            {translateReact(t, 'hero.buttons.services', 'Our Services')}
           </ServicesButton>
           <PrimaryButton to={`/${i18n.language}/projects`}>
-            {t('hero.buttons.projects')}
+            {translateReact(t, 'hero.buttons.projects', 'Projects')}
           </PrimaryButton>
           <SecondaryButton to={`/${i18n.language}/contact`}>
-            {t('hero.buttons.contact')}
+            {translateReact(t, 'hero.buttons.contact', 'Contact Us')}
           </SecondaryButton>
         </HeroButtons>
       </HeroContent>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const FeaturesContainer = styled.section`
   padding: 5rem 0;
@@ -229,6 +230,16 @@ const LinuxIcon = () => (
   </svg>
 );
 
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'services', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'services', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const Features: React.FC = () => {
   const { t } = useTranslation('services');
   const [isVisible, setIsVisible] = useState(false);
@@ -289,39 +300,41 @@ const Features: React.FC = () => {
   const services = [
     {
       icon: <DevServicesIcon />,
-      title: t('categories.dev.title', 'Dev Services'),
-      description: t('categories.dev.description', 'We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices.')
+      title: translateString(t, 'categories.dev.title', 'Dev Services'),
+      description: translateString(t, 'categories.dev.description', 'We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices.')
     },
     {
       icon: <ConsultingIcon />,
-      title: t('categories.consulting.title', 'IT Consulting'),
-      description: t('categories.consulting.description', 'Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals.')
+      title: translateString(t, 'categories.consulting.title', 'IT Consulting'),
+      description: translateString(t, 'categories.consulting.description', 'Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals.')
     },
     {
       icon: <MigrationIcon />,
-      title: t('categories.migration.title', 'Infrastructure Migration'),
-      description: t('categories.migration.description', 'We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process.')
+      title: translateString(t, 'categories.migration.title', 'Infrastructure Migration'),
+      description: translateString(t, 'categories.migration.description', 'We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process.')
     },
     {
       icon: <MonitoringIcon />,
-      title: t('categories.monitoring.title', 'Monitoring'),
-      description: t('categories.monitoring.description', 'Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business.')
+      title: translateString(t, 'categories.monitoring.title', 'Monitoring'),
+      description: translateString(t, 'categories.monitoring.description', 'Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business.')
     },
     {
       icon: <DevOpsIcon />,
-      title: t('categories.devops.title', 'DevOps/SysOps'),
-      description: t('categories.devops.description', 'We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability.')
+      title: translateString(t, 'categories.devops.title', 'DevOps/SysOps'),
+      description: translateString(t, 'categories.devops.description', 'We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability.')
     },
     {
       icon: <LinuxIcon />,
-      title: t('categories.linux.title', 'Linux Admin'),
-      description: t('categories.linux.description', 'With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely.')
+      title: translateString(t, 'categories.linux.title', 'Linux Admin'),
+      description: translateString(t, 'categories.linux.description', 'With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely.')
     }
   ];
   
   return (
     <FeaturesContainer ref={featuresRef} id="services-section">
-      <FeaturesTitle>{t('title', 'Our Services')}</FeaturesTitle>
+      <FeaturesTitle>
+        {translateReact(t, 'title', 'Our Services')}
+      </FeaturesTitle>
       <FeaturesGrid>
         {services.map((service, index) => {
           const position = cardPositions[index];

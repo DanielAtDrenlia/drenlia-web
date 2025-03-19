@@ -1,25 +1,22 @@
 import { useEffect, useRef } from 'react';
-import { i18n as i18nInstance } from 'i18next';
+import { i18n } from 'i18next';
 
-export const usePreserveScroll = (i18n: typeof i18nInstance) => {
+export const usePreserveScroll = (i18n: i18n) => {
   const isLanguageChanging = useRef(false);
 
   useEffect(() => {
-    const handleLanguageChange = () => {
-      const currentPosition = window.scrollY;
-      isLanguageChanging.current = true;
+    const scrollPosition = window.scrollY;
 
-      // Use requestAnimationFrame to ensure we run this after the DOM updates
-      requestAnimationFrame(() => {
-        window.scrollTo(0, currentPosition);
-        // Reset the flag after a short delay to ensure scroll is complete
-        setTimeout(() => {
-          isLanguageChanging.current = false;
-        }, 100);
-      });
+    const handleLanguageChange = () => {
+      isLanguageChanging.current = true;
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+        isLanguageChanging.current = false;
+      }, 0);
     };
 
     i18n.on('languageChanged', handleLanguageChange);
+
     return () => {
       i18n.off('languageChanged', handleLanguageChange);
     };

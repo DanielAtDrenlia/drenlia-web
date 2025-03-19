@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -132,7 +132,7 @@ const navItemStyles = `
   }
 `;
 
-const NavLink = styled(Link)`
+const StyledNavLink = styled(Link)`
   ${navItemStyles}
 `;
 
@@ -180,12 +180,42 @@ const NavbarEnd = styled.div`
   }
 `;
 
+const NavLinkContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
-  
+  const navigate = useNavigate();
+  const isHomePage = location.pathname === `/${i18n.language}`;
+
+  const handleNavigation = (path: string) => {
+    setIsOpen(false);
+    if (path === 'services') {
+      if (isHomePage) {
+        const servicesSection = document.getElementById('services-section');
+        if (servicesSection) {
+          servicesSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        navigate(`/${i18n.language}`);
+        // Wait for navigation to complete before scrolling
+        setTimeout(() => {
+          const servicesSection = document.getElementById('services-section');
+          if (servicesSection) {
+            servicesSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    } else {
+      navigate(`/${i18n.language}${path}`);
+    }
+  };
+
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
@@ -202,20 +232,9 @@ const Navbar: React.FC = () => {
   };
   
   const scrollToServices = () => {
-    const currentLang = i18n.language;
-    if (location.pathname !== `/${currentLang}`) {
-      // If not on homepage, navigate to homepage first
-      window.location.href = `/${currentLang}#services-section`;
-    } else {
-      // If already on homepage, just scroll
-      const servicesSection = document.getElementById('services-section');
-      if (servicesSection) {
-        sessionStorage.setItem('scrollToServices', 'true');
-        servicesSection.scrollIntoView({ behavior: 'smooth' });
-        
-        const event = new CustomEvent('servicesVisible');
-        window.dispatchEvent(event);
-      }
+    const servicesSection = document.getElementById('services');
+    if (servicesSection) {
+      servicesSection.scrollIntoView({ behavior: 'smooth' });
     }
     if (isOpen) {
       setIsOpen(false);
@@ -223,22 +242,17 @@ const Navbar: React.FC = () => {
   };
   
   // Check if a path is active
-  const isActive = (path: string) => {
-    const currentLang = i18n.language;
-    if (path === '/') {
-      return location.pathname === `/${currentLang}`;
-    }
-    return location.pathname === `/${currentLang}${path}`;
+  const isActive = (path: string): boolean => {
+    return window.location.pathname.endsWith(path);
   };
   
   // Get the current language prefix for links
-  const getLangPath = (path: string) => {
-    const currentLang = i18n.language;
-    return path === '/' ? `/${currentLang}` : `/${currentLang}${path}`;
+  const getLangPath = (path: string): string => {
+    return `/${i18n.language}${path}`;
   };
   
   return (
-    <NavContainer isScrolled={isScrolled}>
+    <NavContainer isScrolled={false}>
       <NavContent>
         <LogoContainer to={getLangPath('/')} onClick={scrollToTop}>
           <LogoImage src="/images/logo/logo.png" alt="Drenlia Logo" />
@@ -250,22 +264,38 @@ const Navbar: React.FC = () => {
         </MenuButton>
         
         <NavLinks isOpen={isOpen}>
-          <NavLink to={getLangPath('/about')}>
-            {t('nav.about')}
-            <ActiveIndicator isActive={isActive('/about')} />
-          </NavLink>
-          <NavLink to={getLangPath('/projects')}>
-            {t('nav.projects')}
-            <ActiveIndicator isActive={isActive('/projects')} />
-          </NavLink>
-          <NavLinkButton onClick={scrollToServices}>
-            {t('nav.services')}
-            <ActiveIndicator isActive={false} />
+          <StyledNavLink to={getLangPath('/about')}>
+            <NavLinkContent>
+              <>
+                {t('nav.about', { defaultValue: 'About' })}
+                <ActiveIndicator isActive={isActive('/about')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
+          <StyledNavLink to={getLangPath('/projects')}>
+            <NavLinkContent>
+              <>
+                {t('nav.projects', { defaultValue: 'Projects' })}
+                <ActiveIndicator isActive={isActive('/projects')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
+          <NavLinkButton onClick={() => handleNavigation('services')}>
+            <NavLinkContent>
+              <>
+                {t('nav.services', { defaultValue: 'Services' })}
+                <ActiveIndicator isActive={false} />
+              </>
+            </NavLinkContent>
           </NavLinkButton>
-          <NavLink to={getLangPath('/contact')}>
-            {t('nav.contact')}
-            <ActiveIndicator isActive={isActive('/contact')} />
-          </NavLink>
+          <StyledNavLink to={getLangPath('/contact')}>
+            <NavLinkContent>
+              <>
+                {t('nav.contact', { defaultValue: 'Contact' })}
+                <ActiveIndicator isActive={isActive('/contact')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
           <LanguageSwitcher />
         </NavLinks>
       </NavContent>

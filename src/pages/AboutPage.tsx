@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import CallToAction from '../components/CallToAction';
 import InitialsAvatar from '../components/InitialsAvatar';
-import type { TeamMember } from '../services/apiService';
-import { getAboutSections, getTeamMembers, AboutSection as AboutSectionType } from '../services/apiService';
+import type { TeamMember as ApiTeamMember } from '../services/apiService';
+import { getAboutSections, getTeamMembers } from '../services/apiService';
 import { usePreserveScroll } from '../hooks/usePreserveScroll';
 
 const AboutContainer = styled.div`
@@ -365,16 +366,47 @@ const TeamMemberBio = styled.p`
   line-height: 1.6;
 `;
 
+interface AboutSectionType {
+  about_id: number;
+  title: string;
+  fr_title: string | null;
+  description: string;
+  fr_description: string | null;
+  image_url: string | null;
+  display_order: number;
+}
+
+interface TeamMember extends ApiTeamMember {
+  member_id: number;
+}
+
+interface VisibleSections {
+  header: boolean;
+  team: boolean;
+  [key: string]: boolean;
+}
+
+// Helper function to ensure type safety for translations
+const translateString = (t: TFunction<'about', undefined>, key: string, defaultValue: string): string => {
+  return t(key, defaultValue);
+};
+
+// Helper function for React components that need translated content
+const translateReact = (t: TFunction<'about', undefined>, key: string, defaultValue: string): React.ReactNode => {
+  return t(key, defaultValue);
+};
+
 const AboutPage: React.FC = () => {
   const { t, i18n } = useTranslation('about');
   const [sections, setSections] = useState<AboutSectionType[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visibleSections, setVisibleSections] = useState<{ [key: string]: boolean }>({});
+  const [visibleSections, setVisibleSections] = useState<VisibleSections>({
+    header: false,
+    team: false,
+  });
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
-  // Use the scroll preservation hook
   usePreserveScroll(i18n);
 
   // Helper function to get content based on current language
@@ -412,8 +444,10 @@ const AboutPage: React.FC = () => {
         const sortedSections = [...sectionsData].sort((a, b) => a.display_order - b.display_order);
         setSections(sortedSections);
         
-        // Sort team members by display_order
-        const sortedTeamMembers = [...teamData].sort((a, b) => a.display_order - b.display_order);
+        // Sort team members by display_order and add member_id
+        const sortedTeamMembers = [...teamData]
+          .sort((a, b) => a.display_order - b.display_order)
+          .map(member => ({ ...member, member_id: member.team_id }));
         setTeamMembers(sortedTeamMembers);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -496,15 +530,17 @@ const AboutPage: React.FC = () => {
 
   return (
     <AboutContainer>
-      <AboutHeader 
+      <AboutHeader
         ref={(el: HTMLDivElement | null) => {
           sectionRefs.current['header'] = el;
           if (el) el.id = 'header';
         }}
       >
-        <AboutTitle isVisible={visibleSections.header}>{t('title')}</AboutTitle>
+        <AboutTitle isVisible={visibleSections.header}>
+          {translateReact(t, 'title', 'About Us')}
+        </AboutTitle>
         <AboutSubtitle isVisible={visibleSections.header}>
-          {t('subtitle')}
+          {translateReact(t, 'subtitle', 'Discover our story and meet the team behind our success')}
         </AboutSubtitle>
       </AboutHeader>
 
@@ -512,7 +548,7 @@ const AboutPage: React.FC = () => {
       {sections.map((section, index) => {
         const position = getRandomPosition(index);
         const isEven = index % 2 === 1;
-        
+
         return (
           <AboutSection
             key={section.about_id}
@@ -524,6 +560,7 @@ const AboutPage: React.FC = () => {
             x={position.x}
             y={position.y}
             rotate={position.rotate}
+            index={index}
           >
             <SectionTitle isVisible={visibleSections[`section-${section.about_id}`]}>
               {getLocalizedContent(section, 'title')}
@@ -534,11 +571,11 @@ const AboutPage: React.FC = () => {
               </SectionText>
               <SectionImage isVisible={visibleSections[`section-${section.about_id}`]} isEven={isEven}>
                 <img
-                  src={section.image_url}
+                  src={section.image_url || '/images/placeholder.jpg'}
                   alt={section.title}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2020.993V24H0v-2.996A14.977%2014.977%200%200112.004%2015c4.904%200%209.26%202.354%2011.996%205.993zM16.002%208.999a4%204%200%2011-8%200%204%204%200%20018%200z%22%20%2F%3E%3C%2Fsvg%3E';
+                    target.src = '/images/placeholder.jpg';
                   }}
                 />
               </SectionImage>
@@ -555,11 +592,13 @@ const AboutPage: React.FC = () => {
         }}
         isVisible={visibleSections.team}
       >
-        <SectionTitle isVisible={visibleSections.team}>{t('team.title')}</SectionTitle>
+        <SectionTitle isVisible={visibleSections.team}>
+          {translateReact(t, 'team.title', 'Our Team')}
+        </SectionTitle>
         <TeamGrid>
           {teamMembers.map((member, index) => (
             <TeamMember
-              key={member.team_id}
+              key={member.member_id}
               isVisible={visibleSections.team}
               index={index}
             >
@@ -570,7 +609,7 @@ const AboutPage: React.FC = () => {
                     alt={member.name}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23ccc%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2020.993V24H0v-2.996A14.977%2014.977%200%200112.004%2015c4.904%200%209.26%202.354%2011.996%205.993zM16.002%208.999a4%204%200%2011-8%200%204%204%200%20018%200z%22%20%2F%3E%3C%2Fsvg%3E';
+                      target.src = '/images/placeholder.jpg';
                     }}
                   />
                 </div>
@@ -578,9 +617,9 @@ const AboutPage: React.FC = () => {
                 <InitialsAvatar name={member.name} size={120} />
               )}
               <h3>{member.name}</h3>
-              <h4>{i18n.language === 'fr' && member.fr_title ? member.fr_title : member.title}</h4>
+              <h4>{getLocalizedTeamContent(member, 'title')}</h4>
               {(member.bio || member.fr_bio) && (
-                <p>{i18n.language === 'fr' && member.fr_bio ? member.fr_bio : member.bio || ''}</p>
+                <p>{getLocalizedTeamContent(member, 'bio')}</p>
               )}
             </TeamMember>
           ))}
