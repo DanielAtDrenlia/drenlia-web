@@ -20,7 +20,7 @@
     },
     "submit": {
       "button": "Envoyer",
-      "sending": "Envoi..."
+      "sending": "Envoi en cours..."
     },
     "status": {
       "success": "Merci ! Votre message a été envoyé.",
@@ -45,7 +45,7 @@
   },
   "phone": {
     "title": "Téléphone",
-    "number": "+1 (555) 123-4567"
+    "number": "+1 (438) 123-4567"
   },
   "email": {
     "title": "Email"
@@ -58,7 +58,7 @@
   "captcha": {
     "title": "Veuillez vérifier que vous êtes humain",
     "placeholder": "Entrez le texte de l'image",
-    "refresh": "Actualiser le Captcha",
+    "refresh": "Actualiser le captcha",
     "verify": "Vérifier",
     "loading": "Chargement du captcha...",
     "valid": "Vérification réussie",

@@ -108,23 +108,13 @@ const Tooltip = styled.span<{ visible: boolean }>`
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.8rem;
-  white-space: nowrap;
-  z-index: 10;
-  margin-bottom: 5px;
-  opacity: ${props => props.visible ? 1 : 0};
-  transition: opacity 0.3s ease;
+  white-space: pre-line;
+  text-align: center;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  visibility: ${({ visible }) => (visible ? 'visible' : 'hidden')};
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  z-index: 1000;
   pointer-events: none;
-  
-  &::before {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-  }
 `;
 
 const PhoneContainer = styled.span`

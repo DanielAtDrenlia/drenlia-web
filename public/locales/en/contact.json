@@ -1,6 +1,6 @@
 {
   "title": "Contact Us",
-  "subtitle": "Get in touch with us",
+  "subtitle": "Have a question? We'd love to hear from you.",
   "form": {
     "name": {
       "label": "Name",
@@ -12,7 +12,7 @@
     },
     "subject": {
       "label": "Subject",
-      "placeholder": "Message subject"
+      "placeholder": "What is this about?"
     },
     "message": {
       "label": "Message",
@@ -21,6 +21,10 @@
     "submit": {
       "button": "Send Message",
       "sending": "Sending..."
+    },
+    "status": {
+      "success": "Thank you! Your message has been sent.",
+      "error": "Sorry, there was an error. Please try again."
     },
     "service": {
       "available": "Email service is available"
@@ -37,11 +41,11 @@
   },
   "location": {
     "title": "Our Location",
-    "address": "123 Tech Street\nDigital City, DC 12345\nUnited States"
+    "address": "7037 Tournesols Street\nSaint-Hubert, QC\nJ3Y 8S2\nCanada"
   },
   "phone": {
     "title": "Phone",
-    "number": "+1 (555) 123-4567"
+    "number": "+1 (438) 123-4567"
   },
   "email": {
     "title": "Email"
@@ -59,6 +63,11 @@
     "loading": "Loading captcha...",
     "valid": "Verification successful",
     "invalid": "Incorrect code, please try again",
-    "error": "Error loading captcha. Please try again."
+    "error": "Error loading captcha. Please try again.",
+    "alt": "CAPTCHA image",
+    "verifying": "Verifying...",
+    "error": {
+      "load": "Failed to load captcha"
+    }
   }
 } 

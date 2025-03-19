@@ -22,7 +22,7 @@
       "title": "Contact Info",
       "email": "info@drenlia.com",
       "phone": "+1 (438) 123-4567",
-      "phone_tooltip": "This is obviously a phony number! Please use the email address above.",
+      "phone_tooltip": "This is obviously a phony number!\nPlease send us an email.",
       "address": "7037, rue des Tournesols\nSaint-Hubert, QC J3Y 8S2"
     },
     "copyright": "© {{year}} Drenlia. All rights reserved."
