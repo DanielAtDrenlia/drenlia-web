@@ -200,8 +200,9 @@ interface AdminUser {
   first_name: string;
   last_name: string;
   email: string;
-  password: string;
-  _isDefault: boolean;
+  password?: string;
+  confirm_password?: string;
+  _isDefault?: boolean;  // Make _isDefault optional to match the component
 }
 
 const SetupPage: React.FC = () => {
@@ -218,13 +219,13 @@ const SetupPage: React.FC = () => {
     first_name: '',
     last_name: '',
     email: '',
-    password: '',
     _isDefault: true
   });
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [adminPassword, setAdminPassword] = useState<string | null>(null);
 
   // Handle tab changes
   const handleTabChange = (tab: TabType) => {
@@ -305,9 +306,6 @@ const SetupPage: React.FC = () => {
       case 'backend':
         setBackendEnv(values);
         break;
-      case 'admin':
-        setAdminUser(values);
-        break;
       case 'settings':
         setSettings(values);
         break;
@@ -322,9 +320,15 @@ const SetupPage: React.FC = () => {
     handleUpdate('backend', values);
   }, [handleUpdate]);
 
-  const handleAdminUpdate = useCallback((values: any) => {
-    handleUpdate('admin', values);
-  }, [handleUpdate]);
+  const handleAdminUpdate = useCallback((values: AdminUser) => {
+    // Update the entire admin user state including password
+    setAdminUser(values);
+    // Also update the separate password state if needed
+    if (values.password) {
+      setAdminPassword(values.password);
+    }
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleSettingsUpdate = useCallback((values: any) => {
     handleUpdate('settings', values);
@@ -337,7 +341,7 @@ const SetupPage: React.FC = () => {
         fetch('/api/setup/admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(adminUser)
+          body: JSON.stringify(adminUser)  // Send the entire admin user object
         }),
         fetch('/api/setup/env/.env', {
           method: 'POST',
@@ -358,7 +362,7 @@ const SetupPage: React.FC = () => {
 
       setHasUnsavedChanges(false);
       toast.success('All settings saved successfully');
-      // Reload data to ensure we have the latest from the database
+      setAdminPassword(null);
       loadData();
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -368,28 +372,15 @@ const SetupPage: React.FC = () => {
     }
   };
 
-  const CurrentTabComponent = useCallback(() => {
-    switch (currentTab) {
-      case 'frontend':
-        return <FrontendEnvSetup onUpdate={handleFrontendUpdate} initialValues={frontendEnv} />;
-      case 'backend':
-        return <BackendEnvSetup onUpdate={handleBackendUpdate} initialValues={backendEnv} />;
-      case 'admin':
-        return <AdminUserSetup 
-          onUpdate={handleAdminUpdate} 
-          initialValues={{
-            first_name: adminUser.first_name,
-            last_name: adminUser.last_name,
-            email: adminUser.email,
-            password: '',
-            _isDefault: adminUser._isDefault
-          }} 
-        />;
-      case 'settings':
-        return <SiteSettingsSetup onUpdate={handleSettingsUpdate} initialValues={settings} />;
-      default:
-        return null;
-    }
+  const getStepContent = useCallback(() => {
+    // Create components once and reuse them
+    const components = {
+      frontend: <FrontendEnvSetup key="frontend" onUpdate={handleFrontendUpdate} initialValues={frontendEnv} />,
+      backend: <BackendEnvSetup key="backend" onUpdate={handleBackendUpdate} initialValues={backendEnv} />,
+      admin: <AdminUserSetup key="admin" onUpdate={handleAdminUpdate} initialValues={adminUser} />,
+      settings: <SiteSettingsSetup key="settings" onUpdate={handleSettingsUpdate} initialValues={settings} />
+    };
+    return components[currentTab] || null;
   }, [currentTab, handleFrontendUpdate, handleBackendUpdate, handleAdminUpdate, handleSettingsUpdate, frontendEnv, backendEnv, adminUser, settings]);
 
   if (isLoading) {
@@ -500,7 +491,7 @@ const SetupPage: React.FC = () => {
             {tabDescriptions[currentTab]}
           </TabDescription>
 
-          <CurrentTabComponent />
+          {getStepContent()}
         </Content>
       </Container>
     </>

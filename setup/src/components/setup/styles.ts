@@ -14,7 +14,7 @@ export const Form = styled.form`
 
 export const FormGroup = styled.div`
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(300px, 3fr);
+  grid-template-columns: minmax(150px, 1fr) minmax(300px, 2fr);
   gap: 1rem;
   align-items: center;
   position: relative;

@@ -6,16 +6,20 @@ import {
   Label,
   LabelText,
   KeyName,
-  Input,
+  Input as BaseInput,
   InputContainer,
   Section,
   SectionTitle,
 } from './styles';
 import styled from 'styled-components';
 
+const Input = styled(BaseInput)`
+  width: 90%;
+`;
+
 const PasswordToggleButton = styled.button`
   position: absolute;
-  right: 10px;
+  right: 10%;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -51,12 +55,19 @@ const WarningText = styled.p`
   font-weight: 500;
 `;
 
+const ErrorText = styled.span`
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: block;
+`;
+
 interface AdminUser {
   first_name: string;
   last_name: string;
   email: string;
-  password: string;
-  confirm_password: string;
+  password?: string;
+  _isDefault?: boolean;
 }
 
 interface AdminUserSetupProps {
@@ -64,82 +75,45 @@ interface AdminUserSetupProps {
     first_name?: string;
     last_name?: string;
     email?: string;
-    password?: string;
     _isDefault?: boolean;
+    password?: string;
   };
   onUpdate: (values: AdminUser) => void;
 }
 
 export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, onUpdate }) => {
-  const [values, setValues] = useState<AdminUser>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    confirm_password: ''
+  const [values, setValues] = useState({
+    first_name: initialValues.first_name || '',
+    last_name: initialValues.last_name || '',
+    email: initialValues.email || '',
+    password: initialValues.password || '',
+    _isDefault: initialValues._isDefault || false
   });
-  const [previousValues, setPreviousValues] = useState<AdminUser>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    confirm_password: ''
-  });
+  const [previousValues, setPreviousValues] = useState(values);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isDefault, setIsDefault] = useState(false);
 
+  // Update from parent
   useEffect(() => {
-    if (initialValues) {
-      setValues(prev => ({
-        ...prev,
-        first_name: initialValues.first_name || '',
-        last_name: initialValues.last_name || '',
-        email: initialValues.email || '',
-        password: '',
-        confirm_password: ''
-      }));
-      setPreviousValues(prev => ({
-        ...prev,
-        first_name: initialValues.first_name || '',
-        last_name: initialValues.last_name || '',
-        email: initialValues.email || '',
-        password: '',
-        confirm_password: ''
-      }));
-      setIsDefault(initialValues._isDefault || false);
-    }
+    setValues(prev => ({
+      ...prev,
+      first_name: initialValues.first_name || '',
+      last_name: initialValues.last_name || '',
+      email: initialValues.email || '',
+      _isDefault: initialValues._isDefault || false,
+      password: prev.password
+    }));
   }, [initialValues]);
 
-  const handleChange = (field: keyof AdminUser) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (field: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setValues(prev => ({ ...prev, [field]: newValue }));
-  };
-
-  const handleBlur = (field: keyof AdminUser) => () => {
-    if (values[field] !== previousValues[field]) {
-      onUpdate(values);
-      setPreviousValues(values);
-    }
-  };
-
-  const handleKeyDown = (field: keyof AdminUser) => (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      setValues(prev => ({ ...prev, [field]: previousValues[field] }));
-      (e.target as HTMLInputElement).blur();
-    } else if (e.key === 'Enter') {
-      const inputs = Array.from(document.querySelectorAll('input'));
-      const currentIndex = inputs.indexOf(e.target as HTMLInputElement);
-      const nextInput = inputs[currentIndex + 1];
-      if (nextInput) {
-        nextInput.focus();
-      }
-    }
+    const newValues = { ...values, [field]: newValue };
+    setValues(newValues);
+    onUpdate(newValues);
   };
 
   return (
     <div className="space-y-6">
-      {isDefault && (
+      {values._isDefault && (
         <WarningContainer>
           <WarningText>
             This is a default admin user. Please review and update the information before saving.
@@ -150,7 +124,7 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
         <Container>
           <Form onSubmit={(e) => e.preventDefault()}>
             <Section>
-              <SectionTitle>Personal Information</SectionTitle>
+              <SectionTitle>Admin Account Information</SectionTitle>
               <FormGroup>
                 <Label htmlFor="first_name">
                   <LabelText>First Name</LabelText>
@@ -162,8 +136,6 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
                   name="first_name"
                   value={values.first_name}
                   onChange={handleChange('first_name')}
-                  onBlur={handleBlur('first_name')}
-                  onKeyDown={handleKeyDown('first_name')}
                   placeholder="Enter first name"
                 />
               </FormGroup>
@@ -178,8 +150,6 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
                   name="last_name"
                   value={values.last_name}
                   onChange={handleChange('last_name')}
-                  onBlur={handleBlur('last_name')}
-                  onKeyDown={handleKeyDown('last_name')}
                   placeholder="Enter last name"
                 />
               </FormGroup>
@@ -194,15 +164,9 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
                   name="email"
                   value={values.email}
                   onChange={handleChange('email')}
-                  onBlur={handleBlur('email')}
-                  onKeyDown={handleKeyDown('email')}
                   placeholder="Enter email address"
                 />
               </FormGroup>
-            </Section>
-
-            <Section>
-              <SectionTitle>Password</SectionTitle>
               <FormGroup>
                 <Label htmlFor="password">
                   <LabelText>Password</LabelText>
@@ -215,8 +179,6 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
                     name="password"
                     value={values.password}
                     onChange={handleChange('password')}
-                    onBlur={handleBlur('password')}
-                    onKeyDown={handleKeyDown('password')}
                     placeholder="Enter password"
                   />
                   <PasswordToggleButton
@@ -225,41 +187,6 @@ export const AdminUserSetup: React.FC<AdminUserSetupProps> = ({ initialValues, o
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </PasswordToggleButton>
-                </InputContainer>
-              </FormGroup>
-              <FormGroup>
-                <Label htmlFor="confirm_password">
-                  <LabelText>Confirm Password</LabelText>
-                  <KeyName>(confirm_password)</KeyName>
-                </Label>
-                <InputContainer>
-                  <Input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirm_password"
-                    name="confirm_password"
-                    value={values.confirm_password}
-                    onChange={handleChange('confirm_password')}
-                    onBlur={handleBlur('confirm_password')}
-                    onKeyDown={handleKeyDown('confirm_password')}
-                    placeholder="Confirm password"
-                  />
-                  <PasswordToggleButton
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    title={showConfirmPassword ? "Hide password" : "Show password"}
-                  >
-                    {showConfirmPassword ? (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
                         <line x1="1" y1="1" x2="23" y2="23" />
