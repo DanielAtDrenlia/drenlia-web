@@ -36,7 +36,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "cd server && PORT=3011 npm run start",
-    "dev": "concurrently \"npm run start\" \"npm run server\""
+    "setup": "cd setup && npm start",
+    "dev": "concurrently \"npm run start\" \"npm run server\" \"npm run setup\""
   },
   "eslintConfig": {
     "extends": [
