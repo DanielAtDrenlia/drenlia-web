@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../services/settingsService';
 import TranslationsTab from '../../components/admin/TranslationsTab';
+import LogoUpload from '../../components/admin/LogoUpload';
 import { useAuth } from '../../context/AuthContext';
 
 export interface Setting {
@@ -10,7 +11,7 @@ export interface Setting {
 }
 
 const SettingsPage: React.FC = () => {
-  const { settings, isLoading, error, updateSetting } = useSettings();
+  const { settings, isLoading, error, updateSetting, uploadLogo } = useSettings();
   const { user } = useAuth();
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -20,18 +21,41 @@ const SettingsPage: React.FC = () => {
 
   const isAdmin = user?.isAdmin || false;
 
+  // Redirect non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="text-center py-12">
+          <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h2 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h2>
+          <p className="mt-2 text-sm text-gray-500">You do not have permission to access the settings page. Please contact an administrator for assistance.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading settings...</div>
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-500">{error}</div>
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="text-center py-12">
+          <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="mt-4 text-lg font-medium text-gray-900">Error Loading Settings</h2>
+          <p className="mt-2 text-sm text-gray-500">{error}</p>
+        </div>
       </div>
     );
   }
@@ -103,6 +127,15 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    try {
+      await uploadLogo(file);
+      setSuccessMessage('Logo uploaded successfully');
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Tabs */}
@@ -136,9 +169,6 @@ const SettingsPage: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
-              {!isAdmin && (
-                <p className="mt-1 text-sm text-gray-500">View-only mode. Contact an administrator to make changes.</p>
-              )}
             </div>
             {successMessage && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
@@ -146,6 +176,15 @@ const SettingsPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Logo Upload - Only visible to admins */}
+          {isAdmin && (
+            <LogoUpload
+              currentLogoPath={settings?.find(s => s.key === 'logo_path')?.value || ''}
+              siteName={settings?.find(s => s.key === 'site_name')?.value || ''}
+              onUpload={handleLogoUpload}
+            />
+          )}
 
           {/* New Setting Form - Only visible to admins */}
           {isAdmin && (

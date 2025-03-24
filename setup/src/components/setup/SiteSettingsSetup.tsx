@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import path from 'path';
+import fs from 'fs/promises';
 
 const Container = styled.div`
   padding: 2rem;
@@ -189,12 +191,8 @@ interface SiteSettingsSetupProps {
 // Default settings as a starting point
 const defaultSettings: Record<string, string> = {
   version: '1.1.1',
-  site_name: 'Drenlia',
-  site_description: 'Drenlia - Getting things done!',
-  contact_email: 'contact@drenlia.com',
-  contact_phone: '+1 (555) 123-4567',
-  address: '7037 rue des Tournesols, Saint-Hubert, QC J3Y 8S2',
-  fr_site_description: 'Drenlia - On passe à l\'action!'
+  site_name: 'Company Name',
+  contact_email: 'contact@example.com'
 };
 
 export const SiteSettingsSetup: React.FC<SiteSettingsSetupProps> = ({ initialValues, onUpdate }) => {
@@ -207,8 +205,14 @@ export const SiteSettingsSetup: React.FC<SiteSettingsSetupProps> = ({ initialVal
   useEffect(() => {
     if (initialValues) {
       const { _isDefault, ...rest } = initialValues;
-      setValues(rest);
-      setPreviousValues(rest);
+      // Only keep the fields we want
+      const filteredValues = {
+        version: rest.version || defaultSettings.version,
+        site_name: rest.site_name || defaultSettings.site_name,
+        contact_email: rest.contact_email || defaultSettings.contact_email
+      };
+      setValues(filteredValues);
+      setPreviousValues(filteredValues);
       setIsDefault(Boolean(_isDefault));
     }
   }, [initialValues]);
@@ -217,7 +221,7 @@ export const SiteSettingsSetup: React.FC<SiteSettingsSetupProps> = ({ initialVal
     setValues(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleBlur = () => {
+  const handleBlur = async () => {
     // Only update if values have changed
     if (JSON.stringify(values) !== JSON.stringify(previousValues)) {
       onUpdate(values);

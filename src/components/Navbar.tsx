@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useSettings } from '../services/settingsService';
 
 interface NavContainerProps {
   isScrolled: boolean;
@@ -192,6 +193,9 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHomePage = location.pathname === `/${i18n.language}`;
+  const { settings } = useSettings();
+  const siteName = settings?.find(s => s.key === 'site_name')?.value || 'Company Name';
+  const logoPath = settings?.find(s => s.key === 'logo_path')?.value || '/images/logo/logo.png';
 
   const handleNavigation = (path: string) => {
     setIsOpen(false);
@@ -255,8 +259,8 @@ const Navbar: React.FC = () => {
     <NavContainer isScrolled={false}>
       <NavContent>
         <LogoContainer to={getLangPath('/')} onClick={scrollToTop}>
-          <LogoImage src="/images/logo/logo.png" alt="Drenlia Logo" />
-          <LogoText>Drenlia</LogoText>
+          <LogoImage src={logoPath} alt={siteName} />
+          <LogoText>{siteName}</LogoText>
         </LogoContainer>
         
         <MenuButton onClick={toggleMenu}>
@@ -272,14 +276,6 @@ const Navbar: React.FC = () => {
               </>
             </NavLinkContent>
           </NavLinkButton>
-          <StyledNavLink to={getLangPath('/projects')}>
-            <NavLinkContent>
-              <>
-                {t('nav.projects', { defaultValue: 'Projects' })}
-                <ActiveIndicator isActive={isActive('/projects')} />
-              </>
-            </NavLinkContent>
-          </StyledNavLink>
           <StyledNavLink to={getLangPath('/about')}>
             <NavLinkContent>
               <>

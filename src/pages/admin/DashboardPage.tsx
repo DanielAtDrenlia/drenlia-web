@@ -80,7 +80,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -89,7 +89,7 @@ const DashboardPage: React.FC = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2" width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
                   </svg>
-                  Drenlia Admin
+                  Admin Center
                 </Link>
               </div>
               <nav className="hidden md:ml-8 md:flex md:space-x-6">

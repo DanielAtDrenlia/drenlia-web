@@ -120,7 +120,7 @@ const ContactPage: React.FC = () => {
               </IconWrapper>
               <InfoContent>
                 <InfoTitle>{t('location.title', 'Our Location') as string}</InfoTitle>
-                <InfoText>7037, rue des Tournesols{'\n'}Saint-Hubert, QC J3Y 8S2</InfoText>
+                <InfoText>{t('location.address', '') as string}</InfoText>
               </InfoContent>
             </InfoItem>
           </LocationCard>

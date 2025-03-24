@@ -177,7 +177,7 @@ const Hero: React.FC = () => {
       <Overlay />
       <HeroContent>
         <HeroTitle>
-          {translateReact(t, 'hero.title', 'Welcome to Drenlia')}
+          {translateReact(t, 'hero.title', 'Welcome to Company Name')}
         </HeroTitle>
         <HeroSubtitle>
           {translateReact(t, 'hero.subtitle', 'Your Digital Solutions Partner')}
@@ -186,9 +186,6 @@ const Hero: React.FC = () => {
           <ServicesButton onClick={scrollToServices}>
             {translateReact(t, 'hero.buttons.services', 'Our Services')}
           </ServicesButton>
-          <PrimaryButton to={`/${i18n.language}/projects`}>
-            {translateReact(t, 'hero.buttons.projects', 'Projects')}
-          </PrimaryButton>
           <SecondaryButton to={`/${i18n.language}/contact`}>
             {translateReact(t, 'hero.buttons.contact', 'Contact Us')}
           </SecondaryButton>

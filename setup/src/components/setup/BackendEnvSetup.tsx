@@ -22,14 +22,15 @@ const defaultEnvValues = {
   // Server Configuration
   PORT: '3011',
   FRONTEND_URL: 'http://dev.drenlia.com',
+  ALLOWED_ORIGINS: 'https://drenlia.com,https://dev.drenlia.com,http://localhost:3010',
   
   // Email Configuration
   EMAIL_HOST: 'smtp.gmail.com',
   EMAIL_PORT: '587',
-  EMAIL_USER: 'support@drenlia.com',
+  EMAIL_USER: 'your-email@example.com',
   EMAIL_PASS: '',
-  EMAIL_FROM: 'support@drenlia.com',
-  EMAIL_TO: 'info@drenlia.com',
+  EMAIL_FROM: 'your-email@example.com',
+  EMAIL_TO: 'recipient@example.com',
   
   // Session Configuration
   SESSION_SECRET: '',
@@ -159,7 +160,7 @@ const BackendEnvSetup: React.FC<BackendEnvSetupProps> = ({ onUpdate, initialValu
   const sections = [
     {
       title: 'Server Configuration',
-      keys: ['PORT', 'FRONTEND_URL']
+      keys: ['PORT', 'FRONTEND_URL', 'ALLOWED_ORIGINS']
     },
     {
       title: 'Email Configuration',

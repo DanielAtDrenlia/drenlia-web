@@ -27,6 +27,7 @@ const TeamPage: React.FC = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'fr'>('en');
@@ -311,6 +312,7 @@ const TeamPage: React.FC = () => {
       const textToTranslate = field === 'title' ? formData.title : formData.bio;
       if (!textToTranslate) return;
 
+      setTranslationError(null); // Clear any previous translation error
       const translatedText = await translateText(textToTranslate);
       setFormData(prev => ({
         ...prev,
@@ -318,7 +320,7 @@ const TeamPage: React.FC = () => {
       }));
     } catch (error) {
       console.error('Translation error:', error);
-      setError('Failed to translate text. Please try again.');
+      setTranslationError('Translation failed: Communication with Google Cloud API failed. Please check your API key configuration.');
     }
   };
 
@@ -463,7 +465,11 @@ const TeamPage: React.FC = () => {
       )}
 
       {/* Team Member Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <Modal isOpen={isModalOpen} onClose={() => {
+        setIsModalOpen(false);
+        setError(null);
+        setTranslationError(null); // Clear translation error when closing modal
+      }}>
         <div className="bg-white p-8 rounded-lg max-w-7xl w-full mx-auto overflow-y-auto max-h-[95vh]">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-900">
@@ -472,7 +478,11 @@ const TeamPage: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setError(null);
+                  setTranslationError(null); // Clear translation error when clicking cancel
+                }}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Cancel
@@ -496,9 +506,19 @@ const TeamPage: React.FC = () => {
             </div>
           </div>
           
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-              {error}
+          {/* Error Display Section */}
+          {(error || translationError) && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{translationError || error}</p>
+                </div>
+              </div>
             </div>
           )}
           
@@ -575,22 +595,29 @@ const TeamPage: React.FC = () => {
 
                 <div>
                   <label htmlFor="fr_title" className="block text-sm font-medium text-gray-700">Job Title (French)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      id="fr_title"
-                      name="fr_title"
-                      value={formData.fr_title}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
-                    <TranslateButton
-                      type="button"
-                      onClick={() => handleTranslate('title')}
-                      className="mt-1"
-                    >
-                      Translate
-                    </TranslateButton>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        id="fr_title"
+                        name="fr_title"
+                        value={formData.fr_title}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      <TranslateButton
+                        type="button"
+                        onClick={() => handleTranslate('title')}
+                        className="mt-1"
+                      >
+                        Translate
+                      </TranslateButton>
+                    </div>
+                    {translationError && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {translationError}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -613,22 +640,29 @@ const TeamPage: React.FC = () => {
 
                 <div>
                   <label htmlFor="fr_bio" className="block text-sm font-medium text-gray-700">Bio (French)</label>
-                  <div className="flex gap-2">
-                    <textarea
-                      id="fr_bio"
-                      name="fr_bio"
-                      rows={4}
-                      value={formData.fr_bio}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                    <TranslateButton
-                      type="button"
-                      onClick={() => handleTranslate('bio')}
-                      className="mt-1"
-                    >
-                      Translate
-                    </TranslateButton>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <textarea
+                        id="fr_bio"
+                        name="fr_bio"
+                        rows={4}
+                        value={formData.fr_bio}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                      <TranslateButton
+                        type="button"
+                        onClick={() => handleTranslate('bio')}
+                        className="mt-1"
+                      >
+                        Translate
+                      </TranslateButton>
+                    </div>
+                    {translationError && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {translationError}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

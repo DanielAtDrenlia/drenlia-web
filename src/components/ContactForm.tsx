@@ -11,6 +11,7 @@ const FormCard = styled.div`
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   padding: 2rem;
+  position: relative;
 `;
 
 const FormContainer = styled.form`
@@ -92,22 +93,15 @@ const StatusMessage = styled.div<{ $isError?: boolean }>`
   margin-top: 1rem;
 `;
 
-const ServiceStatus = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #28a745;
-  margin-top: 1rem;
-  
-  &::before {
-    content: '';
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #28a745;
-  }
+const ServiceStatus = styled.div<{ $isAvailable: boolean }>`
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  text-align: center;
+  background-color: white;
+  color: ${props => props.$isAvailable ? '#28a745' : '#ff8c00'};
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 1.5rem;
 `;
 
 // Captcha styles
@@ -413,10 +407,36 @@ const ContactForm: React.FC<ContactFormProps> = ({
     subject: '',
     message: ''
   });
+  const [emailServiceStatus, setEmailServiceStatus] = useState<{
+    configured: boolean;
+    status: string;
+    error?: string;
+  } | null>(null);
   
   // Use external captcha state if provided, otherwise use internal state
   const isCaptchaValid = externalCaptchaValid ?? internalCaptchaValid;
   const handleCaptchaValidation = onValidationChange ?? setInternalCaptchaValid;
+
+  // Check email service status on component mount
+  useEffect(() => {
+    const checkEmailService = async () => {
+      try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+        if (data.success) {
+          setEmailServiceStatus(data.emailService);
+        }
+      } catch (error) {
+        setEmailServiceStatus({
+          configured: false,
+          status: 'error',
+          error: 'Failed to check email service status'
+        });
+      }
+    };
+
+    checkEmailService();
+  }, []);
 
   const validateForm = () => {
     const errors = {
@@ -510,7 +530,11 @@ const ContactForm: React.FC<ContactFormProps> = ({
   };
 
   if (showCaptchaOnly) {
-    return <Captcha onValidationChange={handleCaptchaValidation} />;
+    return (
+      <FormCard>
+        <Captcha onValidationChange={handleCaptchaValidation} />
+      </FormCard>
+    );
   }
   
   return (
@@ -575,8 +599,15 @@ const ContactForm: React.FC<ContactFormProps> = ({
             {status.message}
           </StatusMessage>
         )}
-        
-        <ServiceStatus>{translateString(t, 'form.service.available', 'Email service is available')}</ServiceStatus>
+
+        {emailServiceStatus && (
+          <ServiceStatus $isAvailable={emailServiceStatus.configured}>
+            {emailServiceStatus.configured 
+              ? translateString(t, 'form.service.available', 'Email service is available')
+              : translateString(t, 'form.service.not_configured', 'Email service is not configured. Please contact the administrator.')
+            }
+          </ServiceStatus>
+        )}
       </FormContainer>
     </FormCard>
   );

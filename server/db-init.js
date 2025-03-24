@@ -93,17 +93,17 @@ if (!dbExists) {
   const aboutSections = [
     {
       title: 'Our Story',
-      description: 'Founded in 2015, Drenlia has been at the forefront of innovation in our industry. What started as a small team with big dreams has grown into a company dedicated to excellence and customer satisfaction.',
+      description: 'Founded with a vision to make a difference, we have been committed to delivering excellence in our industry. What started as a small team with big dreams has evolved into an organization focused on innovation and customer success.',
       order: 1
     },
     {
       title: 'Our Mission',
-      description: 'At Drenlia, our mission is to provide exceptional products and services that improve the lives of our customers. We strive to innovate, inspire, and make a positive impact in everything we do.',
+      description: 'Our mission is to deliver high-quality solutions that create value for our customers. We are dedicated to innovation, continuous improvement, and exceeding expectations in everything we do.',
       order: 2
     },
     {
       title: 'Our Values',
-      description: 'Integrity, excellence, and customer focus are at the heart of everything we do. We believe in transparent business practices, continuous improvement, and building lasting relationships with our clients and partners.',
+      description: 'Our core values of integrity, excellence, and customer focus guide every decision we make. We believe in building lasting partnerships through transparency, reliability, and a commitment to mutual success.',
       order: 3
     }
   ];

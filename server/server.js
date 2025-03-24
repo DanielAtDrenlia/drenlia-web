@@ -1,4 +1,26 @@
-require('dotenv').config();
+// Custom dotenv config to handle comments and empty lines
+const fs = require('fs');
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Load and parse .env file manually
+try {
+  const envPath = path.join(__dirname, '.env');
+  const envConfig = fs.readFileSync(envPath, 'utf8')
+    .split('\n')
+    .filter(line => line.trim() && !line.trim().startsWith('#'))  // Remove empty lines and comments
+    .join('\n');
+  
+  const parsedConfig = dotenv.parse(envConfig);
+  
+  // Set environment variables
+  for (const k in parsedConfig) {
+    process.env[k] = parsedConfig[k];
+  }
+} catch (error) {
+  console.warn('Warning: .env file not found or has invalid format:', error);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,8 +31,6 @@ const passport = require('passport');
 const db = require('./db');
 const auth = require('./auth');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const fsPromises = require('fs').promises;
 const { createCanvas } = require('canvas');
 const translateRouter = require('./routes/translate');
@@ -50,28 +70,16 @@ app.use(passport.session());
 app.use(helmet({
   contentSecurityPolicy: false // Disable CSP to allow SVG rendering
 }));
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // List of allowed origins
-    const allowedOrigins = [
-      'https://drenlia.com',
-      'https://dev.drenlia.com',
-      'http://localhost:3010'
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+
+// CORS configuration
+const corsOptions = {
+  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3010,http://localhost:5173').split(','),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -134,6 +142,36 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB max file size
+  }
+});
+
+// Configure multer for file upload
+const logoImagesDir = path.join(__dirname, '../public/images/logo');
+
+// Ensure the logo directory exists
+if (!fs.existsSync(logoImagesDir)) {
+  fs.mkdirSync(logoImagesDir, { recursive: true });
+}
+
+const logoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, logoImagesDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'logo.png');
+  }
+});
+
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed!'));
+    }
+    cb(null, true);
   }
 });
 
@@ -748,6 +786,65 @@ app.post('/api/admin/upload/about-image', auth.isAdmin, upload.single('image'), 
   }
 });
 
+// Logo upload endpoint
+app.post('/api/admin/logo', auth.isAuthenticated, auth.isAdmin, logoUpload.single('logo'), async (req, res) => {
+  try {
+    console.log('Logo upload request received:', {
+      file: req.file,
+      body: req.body,
+      headers: req.headers
+    });
+
+    let logoPath = '/images/logo/logo.png';
+
+    if (req.file) {
+      console.log('File uploaded successfully:', req.file);
+      // Use the uploaded file
+      logoPath = `/images/logo/${req.file.filename}`;
+    } else {
+      console.log('No file uploaded, generating logo from site name');
+      // Generate a new logo from site name
+      const siteName = db.settings.getSetting('site_name') || 'Company Name';
+      const timestamp = Date.now();
+      const randomNum = Math.floor(Math.random() * 1000);
+      const filename = `logo-${timestamp}-${randomNum}.png`;
+      
+      // Use the correct path for the public directory
+      const logoDir = path.join(__dirname, '..', 'public', 'images', 'logo');
+      const filepath = path.join(logoDir, filename);
+
+      console.log('Creating logo directory:', logoDir);
+      // Ensure the directory exists
+      await fs.promises.mkdir(logoDir, { recursive: true });
+
+      console.log('Generating logo for site name:', siteName);
+      // Generate and save the logo
+      const avatarBuffer = await generateLetterAvatar(siteName, 200, 100);
+      
+      console.log('Saving logo to:', filepath);
+      await fs.promises.writeFile(filepath, avatarBuffer);
+      logoPath = `/images/logo/${filename}`;
+    }
+
+    console.log('Updating logo path in settings:', logoPath);
+    // Update the logo path in settings
+    db.settings.setSetting('logo_path', logoPath);
+
+    res.json({
+      success: true,
+      path: logoPath
+    });
+  } catch (error) {
+    console.error('Error handling logo:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to handle logo',
+      error: error.message
+    });
+  }
+});
+
 // Generate captcha endpoint
 app.get('/api/captcha', (req, res) => {
   // Create a captcha with options - simplified configuration
@@ -899,20 +996,63 @@ app.post('/api/send-email', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok',
-    version: db.settings.getSetting('version') || '1.0.0'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check if email configuration is valid
+    const hasValidEmailConfig = process.env.EMAIL_HOST && 
+                               process.env.EMAIL_PORT && 
+                               process.env.EMAIL_USER && 
+                               process.env.EMAIL_PASS && 
+                               process.env.EMAIL_FROM && 
+                               process.env.EMAIL_TO &&
+                               process.env.EMAIL_USER !== 'your-email@example.com' &&
+                               process.env.EMAIL_PASS !== 'yourpassword';
+
+    // Test the email connection if configured
+    if (hasValidEmailConfig) {
+      await transporter.verify();
+    }
+
+    res.json({
+      success: true,
+      emailService: {
+        configured: hasValidEmailConfig,
+        status: hasValidEmailConfig ? 'ready' : 'not_configured'
+      }
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.json({
+      success: true,
+      emailService: {
+        configured: false,
+        status: 'error',
+        error: error.message
+      }
+    });
+  }
 });
 
 // Settings routes
-app.get('/api/admin/settings', auth.isAuthenticated, (req, res) => {
+app.get('/api/settings', (req, res) => {
+  try {
+    // Only return specific settings that are safe to expose publicly
+    const settings = db.settings.getAllSettings().filter(setting => 
+      ['contact_email', 'site_name'].includes(setting.key)
+    );
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching settings' });
+  }
+});
+
+app.get('/api/admin/settings', auth.isAuthenticated, auth.isAdmin, (req, res) => {
   try {
     const settings = db.settings.getAllSettings();
     res.json({ success: true, settings });
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    console.error('Error fetching admin settings:', error);
     res.status(500).json({ success: false, message: 'Error fetching settings' });
   }
 });
@@ -1030,11 +1170,52 @@ app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
         path: filePath
       });
     }
-    
-    // Write the updated content back to the file
-    await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
-    
-    res.json({ success: true });
+
+    // Validate that content is a valid object
+    if (typeof content !== 'object' || content === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content must be a valid JSON object'
+      });
+    }
+
+    // Create a backup of the current file
+    const backupPath = `${filePath}.backup`;
+    try {
+      await fsPromises.copyFile(filePath, backupPath);
+    } catch (error) {
+      console.error('Failed to create backup:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create backup before update',
+        error: error.message
+      });
+    }
+
+    try {
+      // Write the updated content back to the file
+      await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
+      
+      // If successful, remove the backup
+      await fsPromises.unlink(backupPath);
+      
+      res.json({ success: true });
+    } catch (error) {
+      // If write fails, restore from backup
+      try {
+        await fsPromises.copyFile(backupPath, filePath);
+        await fsPromises.unlink(backupPath);
+      } catch (restoreError) {
+        console.error('Failed to restore from backup:', restoreError);
+      }
+      
+      console.error('Error updating translation:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error updating translation',
+        error: error.message 
+      });
+    }
   } catch (error) {
     console.error('Error updating translation:', error);
     res.status(500).json({ 

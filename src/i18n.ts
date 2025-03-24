@@ -17,7 +17,7 @@ const config: InitOptions = {
   fallbackLng: 'en',
   supportedLngs: ['fr', 'en'],
   defaultNS: 'common',
-  ns: ['common', 'about', 'home', 'contact', 'projects', 'services'],
+  ns: ['common', 'about', 'home', 'contact', 'services'],
 
   detection: {
     order: ['path', 'localStorage', 'navigator'],

@@ -63,11 +63,11 @@ const ensureDbReady = async () => {
 
     // Open or create database
     db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('Error opening database:', err);
+  if (err) {
+    console.error('Error opening database:', err);
         reject(err);
-        return;
-      }
+    return;
+  }
       console.log('Connected to SQLite database');
 
       // Enable foreign keys
@@ -92,8 +92,8 @@ const ensureDbReady = async () => {
           )
         `);
 
-        db.run(`
-          CREATE TABLE IF NOT EXISTS settings (
+  db.run(`
+    CREATE TABLE IF NOT EXISTS settings (
             setting_id INTEGER PRIMARY KEY AUTOINCREMENT,
             key TEXT UNIQUE NOT NULL,
             value TEXT,
@@ -169,7 +169,7 @@ const ensureDbReady = async () => {
               display_order: 1,
               fr_title: 'PDG & Fondateur',
               fr_bio: 'Avec plus de 20 ans d\'expérience dans l\'industrie.',
-              email: 'john@drenlia.com'
+              email: 'john@companyname.com'
             },
             {
               name: 'Sarah Johnson',
@@ -178,7 +178,7 @@ const ensureDbReady = async () => {
               display_order: 2,
               fr_title: 'Directrice Technique',
               fr_bio: 'Dirige notre innovation et développement technique.',
-              email: 'sarah@drenlia.com'
+              email: 'sarah@companyname.com'
             },
             {
               name: 'Michael Chen',
@@ -187,7 +187,7 @@ const ensureDbReady = async () => {
               display_order: 3,
               fr_title: 'Directeur des Opérations',
               fr_bio: 'Optimisation de nos opérations et processus.',
-              email: 'michael@drenlia.com'
+              email: 'michael@companyname.com'
             }
           ];
 
@@ -260,18 +260,14 @@ const defaultValues = {
   admin: {
     first_name: 'Admin',
     last_name: 'User',
-    email: 'admin@drenlia.com',
+    email: 'admin@example.com',
     password: null
   },
   frontend: {
     NEXT_PUBLIC_API_URL: 'http://localhost:3001',
     NEXT_PUBLIC_SITE_URL: 'http://localhost:3000',
-    NEXT_PUBLIC_SITE_NAME: 'Drenlia',
-    NEXT_PUBLIC_SITE_DESCRIPTION: 'Drenlia - Getting things done!',
-    NEXT_PUBLIC_CONTACT_EMAIL: 'contact@drenlia.com',
-    NEXT_PUBLIC_CONTACT_PHONE: '+1 (555) 123-4567',
-    NEXT_PUBLIC_ADDRESS: '7037 rue des Tournesols, Saint-Hubert, QC J3Y 8S2',
-    NEXT_PUBLIC_FR_SITE_DESCRIPTION: 'Drenlia - On passe à l\'action!'
+    NEXT_PUBLIC_SITE_NAME: 'Company Name',
+    NEXT_PUBLIC_CONTACT_EMAIL: 'contact@example.com'
   },
   backend: {
     PORT: '3001',
@@ -285,16 +281,12 @@ const defaultValues = {
     SMTP_PORT: '587',
     SMTP_USER: '',
     SMTP_PASS: '',
-    SMTP_FROM: 'noreply@drenlia.com'
+    SMTP_FROM: 'noreply@example.com'
   },
   settings: {
     version: '1.1.1',
-    site_name: 'Drenlia',
-    site_description: 'Drenlia - Getting things done!',
-    contact_email: 'contact@drenlia.com',
-    contact_phone: '+1 (555) 123-4567',
-    address: '7037 rue des Tournesols, Saint-Hubert, QC J3Y 8S2',
-    fr_site_description: 'Drenlia - On passe à l\'action!'
+    site_name: 'Company Name',
+    contact_email: 'contact@example.com'
   }
 };
 
@@ -333,6 +325,32 @@ apiRouter.post('/settings', async (req, res) => {
   try {
     await ensureDbReady();
     const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+    
+    // Handle site_name updates
+    if (req.body.site_name) {
+      try {
+        // Update index.html
+        const indexHtmlPath = path.join(rootDir, 'public', 'index.html');
+        const indexHtmlContent = await fsPromises.readFile(indexHtmlPath, 'utf-8');
+        const updatedIndexHtml = indexHtmlContent.replace(
+          /<title>.*?<\/title>/,
+          `<title>${req.body.site_name}</title>`
+        );
+        await fsPromises.writeFile(indexHtmlPath, updatedIndexHtml);
+
+        // Update manifest.json
+        const manifestPath = path.join(rootDir, 'public', 'manifest.json');
+        const manifestContent = await fsPromises.readFile(manifestPath, 'utf-8');
+        const manifest = JSON.parse(manifestContent);
+        manifest.short_name = req.body.site_name;
+        await fsPromises.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+      } catch (error) {
+        console.error('Error updating site name in files:', error);
+        // Continue with saving to database even if file updates fail
+      }
+    }
+
+    // Save to database
     Object.entries(req.body).forEach(([key, value]) => {
       stmt.run(key, value);
     });
@@ -591,11 +609,11 @@ const initializeServer = async () => {
     console.log('Database initialized successfully');
 
     // Start listening only after database is ready
-    app.listen(PORT, () => {
+app.listen(PORT, () => {
       console.log(`Setup API server running on port ${PORT}`);
       console.log('Root directory:', rootDir);
-      console.log('Database path:', dbPath);
-    });
+  console.log('Database path:', dbPath);
+}); 
   } catch (error) {
     console.error('Failed to initialize server:', error);
     process.exit(1);

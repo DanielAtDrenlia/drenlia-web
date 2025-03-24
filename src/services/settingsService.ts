@@ -6,8 +6,8 @@ export interface Setting {
   updated_at: string;
 }
 
-// API base URL - use relative path for all environments
-const API_BASE_URL = '/api';
+// API base URL - handle both development and production environments
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 export function useSettings() {
   const [settings, setSettings] = useState<Setting[] | null>(null);
@@ -20,7 +20,12 @@ export function useSettings() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+      // Always use the admin endpoint when in the admin section
+      const endpoint = window.location.pathname.startsWith('/admin') 
+        ? `${API_BASE_URL}/admin/settings`
+        : `${API_BASE_URL}/settings`;
+
+      const response = await fetch(endpoint, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -29,6 +34,9 @@ export function useSettings() {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('You do not have permission to access these settings');
+        }
         throw new Error('Failed to fetch settings');
       }
 
@@ -36,10 +44,11 @@ export function useSettings() {
       if (data.success) {
         setSettings(data.settings);
       } else {
-        setError('Failed to fetch settings');
+        throw new Error(data.message || 'Failed to fetch settings');
       }
     } catch (err) {
-      setError('Error fetching settings');
+      const errorMessage = err instanceof Error ? err.message : 'Error fetching settings';
+      setError(errorMessage);
       console.error('Error fetching settings:', err);
     } finally {
       setIsLoading(false);
@@ -89,10 +98,54 @@ export function useSettings() {
     }
   };
 
+  const uploadLogo = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      console.log('Uploading logo to:', `${API_BASE_URL}/admin/logo`);
+      const response = await fetch(`${API_BASE_URL}/admin/logo`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to upload logo');
+      }
+
+      if (data.success) {
+        // Update local state with the new logo path
+        setSettings(prev => {
+          if (!prev) return [{ key: 'logo_path', value: data.path, updated_at: new Date().toISOString() }];
+          
+          const existingIndex = prev.findIndex(setting => setting.key === 'logo_path');
+          if (existingIndex === -1) {
+            return [...prev, { key: 'logo_path', value: data.path, updated_at: new Date().toISOString() }];
+          } else {
+            return prev.map(setting => 
+              setting.key === 'logo_path'
+                ? { ...setting, value: data.path, updated_at: new Date().toISOString() }
+                : setting
+            );
+          }
+        });
+      } else {
+        throw new Error(data.message || data.error || 'Failed to upload logo');
+      }
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+      throw err;
+    }
+  };
+
   return {
     settings,
     isLoading,
     error,
-    updateSetting
+    updateSetting,
+    uploadLogo
   };
 } 

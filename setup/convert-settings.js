@@ -5,10 +5,7 @@ const path = require('path');
 const defaultSettings = {
   version: '1.0',
   site_name: 'Company Name',
-  site_description: 'Company Name - Tagline',
-  contact_email: 'email@example.com',
-  contact_phone: '+1 (555) 123-4567',
-  address: '1234 The Street, The City, PV H0H 0H0',
+  contact_email: 'email@example.com'
 };
 
 async function convertSettings() {
@@ -26,7 +23,10 @@ async function convertSettings() {
     });
 
     const settingsObj = settings.reduce((acc, row) => {
-      acc[row.key] = row.value;
+      // Only keep the fields we want
+      if (['version', 'site_name', 'contact_email'].includes(row.key)) {
+        acc[row.key] = row.value;
+      }
       return acc;
     }, {});
 
@@ -45,4 +45,9 @@ async function convertSettings() {
   }
 }
 
-convertSettings(); 
+// If this script is run directly
+if (require.main === module) {
+  convertSettings();
+}
+
+module.exports = { convertSettings }; 

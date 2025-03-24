@@ -220,7 +220,7 @@ const Footer: React.FC = () => {
             {translateReact(t, 'footer.about.title', 'About Us')}
           </FooterTitle>
           <FooterText>
-            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
+            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services.')}
           </FooterText>
         </FooterSection>
         
