@@ -1,7 +1,7 @@
 {
   "name": "drenlia-setup-ui",
   "version": "1.0.0",
-  "description": "Drenlia Web Setup UI",
+  "description": "Web Setup UI",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,7 +1,7 @@
 {
   "name": "drenlia-setup-api",
   "version": "1.0.0",
-  "description": "Drenlia Web Setup API",
+  "description": "Web Setup API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

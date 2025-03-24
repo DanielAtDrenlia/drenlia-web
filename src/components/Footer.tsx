@@ -271,7 +271,7 @@ const Footer: React.FC = () => {
       </FooterContent>
 
       <Copyright>
-        {translateReact(t, 'footer.copyright', '© {{year}} Drenlia. All rights reserved.', { year: currentYear })}
+        {translateReact(t, 'footer.copyright', '© {{year}}. All rights reserved.', { year: currentYear })}
       </Copyright>
     </FooterContainer>
   );

@@ -1025,10 +1025,10 @@ app.post('/api/send-email', async (req, res) => {
       from: process.env.EMAIL_FROM,
       to: process.env.EMAIL_TO,
       replyTo: email,
-      subject: subject || `New message from ${name} via Drenlia website`,
+      subject: subject || `New message from ${name} via website`,
       text: `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`,
       html: `
-        <h3>Drenlia Contact Form Submission</h3>
+        <h3>Contact Form Submission</h3>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Message:</strong></p>
