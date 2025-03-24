@@ -619,9 +619,9 @@ app.get('/api/team', (req, res) => {
   }
 });
 
-app.post('/api/admin/team', auth.isAdmin, (req, res) => {
+app.post('/api/admin/team', auth.isAdmin, async (req, res) => {
   try {
-    const { name, title, bio, image_url, display_order } = req.body;
+    const { name, title, bio, image_url, display_order, fr_title, fr_bio, email } = req.body;
     
     if (!name || !title) {
       return res.status(400).json({ success: false, message: 'Name and title are required' });
@@ -630,22 +630,31 @@ app.post('/api/admin/team', auth.isAdmin, (req, res) => {
     // If no image_url is provided, generate a letter avatar
     let finalImageUrl = image_url;
     if (!finalImageUrl) {
-      // Generate a unique filename
-      const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
-      const avatarPath = path.join(teamImagesDir, filename);
-      
-      // Generate and save the avatar
-      const avatarBuffer = generateLetterAvatar(name);
-      fs.writeFileSync(avatarPath, avatarBuffer);
-      
-      // Set the image URL to the generated avatar
-      finalImageUrl = `/images/team/${filename}`;
+      try {
+        // Generate a unique filename
+        const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+        const avatarPath = path.join(teamImagesDir, filename);
+        
+        // Generate and save the avatar
+        const avatarBuffer = await generateLetterAvatar(name);
+        fs.writeFileSync(avatarPath, avatarBuffer);
+        
+        // Set the image URL to the generated avatar
+        finalImageUrl = `/images/team/${filename}`;
+      } catch (avatarError) {
+        console.error('Error generating avatar:', avatarError);
+        // If avatar generation fails, use a default avatar
+        finalImageUrl = '/images/team/default-avatar.png';
+      }
     }
     
     const id = db.team.createMember({
       name,
       title,
       bio,
+      fr_title,
+      fr_bio,
+      email,
       image_url: finalImageUrl,
       display_order: display_order || 0
     });
@@ -698,16 +707,33 @@ app.put('/api/admin/team/:id', auth.isAuthenticatedOrAdmin, async (req, res) => 
     
     // Handle image removal and avatar generation
     if (image_url === null || image_url === '') {
+      // Try to delete the old image file if it exists
+      if (currentMember.image_url && currentMember.image_url.startsWith('/images/team/')) {
+        const oldImagePath = path.join(__dirname, '..', 'public', currentMember.image_url);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete old team member image file:', err.message);
+          }
+        });
+      }
+
       // Generate a unique filename
       const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
       const avatarPath = path.join(teamImagesDir, filename);
       
-      // Generate and save the avatar
-      const avatarBuffer = generateLetterAvatar(name);
-      fs.writeFileSync(avatarPath, avatarBuffer);
-      
-      // Set the image URL to the generated avatar
-      updateData.image_url = `/images/team/${filename}`;
+      try {
+        // Generate and save the avatar
+        const avatarBuffer = await generateLetterAvatar(name);
+        fs.writeFileSync(avatarPath, avatarBuffer);
+        
+        // Set the image URL to the generated avatar
+        updateData.image_url = `/images/team/${filename}`;
+      } catch (avatarError) {
+        console.error('Error generating avatar:', avatarError);
+        // If avatar generation fails, use a default avatar
+        updateData.image_url = '/images/team/default-avatar.png';
+      }
     }
     
     const success = db.team.updateMember(id, updateData);
@@ -726,9 +752,27 @@ app.put('/api/admin/team/:id', auth.isAuthenticatedOrAdmin, async (req, res) => 
 app.delete('/api/admin/team/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // Get the member's current image URL before deleting
+    const member = db.team.getMemberById(id);
+    if (!member) {
+      return res.status(404).json({ success: false, message: 'Team member not found' });
+    }
+
+    // Delete the member from the database
     const success = db.team.deleteMember(id);
     
     if (success) {
+      // Try to delete the image file if it exists
+      if (member.image_url && member.image_url.startsWith('/images/team/')) {
+        const imagePath = path.join(__dirname, '..', 'public', member.image_url);
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete team member image file:', err.message);
+          }
+        });
+      }
       res.json({ success: true });
     } else {
       res.status(404).json({ success: false, message: 'Team member not found' });
@@ -740,10 +784,24 @@ app.delete('/api/admin/team/:id', auth.isAdmin, (req, res) => {
 });
 
 // File upload endpoint for team member profile pictures
-app.post('/api/admin/upload/team-image', auth.isAdmin, upload.single('image'), (req, res) => {
+app.post('/api/admin/upload/team-image', auth.isAuthenticated, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    // If user is not an admin, check if they're editing their own profile
+    if (!req.user.admin) {
+      // Get the team member by email
+      const teamMembers = db.team.getAllMembers();
+      const userTeamMember = teamMembers.find(member => member.email === req.user.email);
+      
+      if (!userTeamMember) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'You can only upload images for your own profile' 
+        });
+      }
     }
     
     // Return the path to the uploaded file (relative to public directory)

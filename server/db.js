@@ -476,7 +476,7 @@ const teamFunctions = {
   updateMember(id, data) {
     const stmt = getDb().prepare(`
       UPDATE team 
-      SET name = ?, title = ?, fr_title = ?, bio = ?, fr_bio = ?, image_url = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, title = ?, fr_title = ?, bio = ?, fr_bio = ?, image_url = ?, display_order = ?, email = ?, updated_at = CURRENT_TIMESTAMP
       WHERE team_id = ?
     `);
     
@@ -488,6 +488,7 @@ const teamFunctions = {
       data.fr_bio || null,
       data.image_url || null,
       data.display_order || 0,
+      data.email || null,
       id
     );
     
@@ -501,8 +502,8 @@ const teamFunctions = {
    */
   createMember(data) {
     const stmt = getDb().prepare(`
-      INSERT INTO team (name, title, fr_title, bio, fr_bio, image_url, display_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO team (name, title, fr_title, bio, fr_bio, image_url, display_order, email)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const info = stmt.run(
@@ -512,7 +513,8 @@ const teamFunctions = {
       data.bio || null,
       data.fr_bio || null,
       data.image_url || null,
-      data.display_order || 0
+      data.display_order || 0,
+      data.email || null
     );
     
     return info.lastInsertRowid;
