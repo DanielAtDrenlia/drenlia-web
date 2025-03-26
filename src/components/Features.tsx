@@ -253,18 +253,15 @@ const Features: React.FC = () => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         // Only set visible if the section is significantly in view
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
-          // Add a small delay to ensure smooth scrolling has completed
-          setTimeout(() => {
-            setIsVisible(true);
-          }, 100);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+          setIsVisible(true);
         } else {
           setIsVisible(false);
         }
       },
       {
-        threshold: [0.3], // Require 30% of the section to be visible
-        rootMargin: '-10% 0px' // Trigger slightly after entering viewport
+        threshold: [0.2], // Require 20% of the section to be visible
+        rootMargin: '0px' // Trigger as soon as the section starts entering viewport
       }
     );
     
