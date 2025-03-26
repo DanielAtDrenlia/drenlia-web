@@ -21,7 +21,7 @@
       "title": "Coordonnées",
       "email": "info@yourcompany.com",
       "phone": "+1 (555) 123-4567",
-      "phone_tooltip": "C'est évidemment un faux numéro !\nContactez-nous par e-mail svp.",
+      "phone_tooltip": "C'est évidemment un faux numéro ! Contactez-nous par e-mail svp.",
       "address": "1234 Rue de la Paix, Ville de Montréal, QC, H3Z 2Y7, Canada"
     },
     "copyright": "© {{year}} Votre Entreprise. Tous droits réservés."

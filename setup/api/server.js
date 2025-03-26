@@ -10,21 +10,23 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Define paths relative to the main application
-const rootDir = path.join(__dirname, '..', '..');  // Go up from setup/api to project root
-const dbPath = path.join(rootDir, 'server', 'database.sqlite');
+// Define paths relative to the container
+const rootDir = path.join(__dirname, '..', '..');  // Points to /app
+const serverDir = path.join(rootDir, 'server');    // Points to /app/server
+const dbPath = path.join(serverDir, 'database.sqlite');
 
 // Debug logging on startup
 console.log('\n=== SETUP SERVER STARTING ===');
 console.log('Current directory:', __dirname);
 console.log('Root directory:', rootDir);
+console.log('Server directory:', serverDir);
 console.log('Database path:', dbPath);
 
-// Ensure server directory exists
-const serverDir = path.dirname(dbPath);
-if (!fs.existsSync(serverDir)) {
-  fs.mkdirSync(serverDir, { recursive: true });
-  console.log('Created server directory:', serverDir);
+// Ensure data directory exists
+const dataDir = path.dirname(dbPath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('Created data directory:', dataDir);
 }
 
 // Create a single database connection
@@ -378,10 +380,10 @@ apiRouter.get('/env/:filename', async (req, res) => {
     // Map the requested file to the correct location
     let envPath;
     if (filename === '.env') {
-      envPath = path.join(rootDir, '.env');
+      envPath = path.join(rootDir, '.env');  // Frontend .env in root (/app/.env)
       console.log('Loading frontend .env from:', envPath);
     } else if (filename === 'setup.env') {
-      envPath = path.join(rootDir, 'server', '.env');
+      envPath = path.join(serverDir, '.env');  // Backend .env in server directory (/app/server/.env)
       console.log('Loading backend .env from:', envPath);
     } else {
       console.log('Invalid filename requested');
@@ -434,7 +436,7 @@ apiRouter.post('/env/:filename', async (req, res) => {
     if (filename === '.env') {
       envPath = path.join(rootDir, '.env');  // Frontend .env in root
     } else if (filename === 'setup.env') {
-      envPath = path.join(rootDir, 'server', '.env');  // Backend .env in server directory
+      envPath = path.join(serverDir, '.env');  // Backend .env in server directory
     } else {
       res.status(400).json({ error: 'Invalid file name' });
       return;
@@ -595,13 +597,14 @@ const initializeServer = async () => {
     console.log('\n=== SETUP SERVER STARTING ===');
     console.log('Current directory:', __dirname);
     console.log('Root directory:', rootDir);
+    console.log('Server directory:', serverDir);
     console.log('Database path:', dbPath);
 
-    // Ensure server directory exists
-    const serverDir = path.dirname(dbPath);
-    if (!fs.existsSync(serverDir)) {
-      fs.mkdirSync(serverDir, { recursive: true });
-      console.log('Created server directory:', serverDir);
+    // Ensure data directory exists
+    const dataDir = path.dirname(dbPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      console.log('Created data directory:', dataDir);
     }
 
     // Initialize database and wait for it to be ready
@@ -612,6 +615,7 @@ const initializeServer = async () => {
 app.listen(PORT, () => {
       console.log(`Setup API server running on port ${PORT}`);
       console.log('Root directory:', rootDir);
+  console.log('Server directory:', serverDir);
   console.log('Database path:', dbPath);
 }); 
   } catch (error) {

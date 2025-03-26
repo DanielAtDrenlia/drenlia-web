@@ -2,23 +2,34 @@
 const fs = require('fs');
 const dotenv = require('dotenv');
 const path = require('path');
+const { exec } = require('child_process');
+const net = require('net');
+const { spawn } = require('child_process');
 
-// Load and parse .env file manually
+// Load .env file
 try {
   const envPath = path.join(__dirname, '.env');
-  const envConfig = fs.readFileSync(envPath, 'utf8')
-    .split('\n')
-    .filter(line => line.trim() && !line.trim().startsWith('#'))  // Remove empty lines and comments
-    .join('\n');
+  console.log('Loading environment variables from:', envPath);
   
-  const parsedConfig = dotenv.parse(envConfig);
+  const result = dotenv.config({ path: envPath });
   
-  // Set environment variables
-  for (const k in parsedConfig) {
-    process.env[k] = parsedConfig[k];
+  if (result.error) {
+    throw result.error;
   }
+  
+  console.log('Environment variables loaded successfully');
+  console.log('Email configuration:', {
+    EMAIL_HOST: process.env.EMAIL_HOST,
+    EMAIL_PORT: process.env.EMAIL_PORT,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_TO: process.env.EMAIL_TO,
+    // Don't log EMAIL_PASS for security
+  });
 } catch (error) {
   console.warn('Warning: .env file not found or has invalid format:', error);
+  console.warn('Current working directory:', process.cwd());
+  console.warn('__dirname:', __dirname);
 }
 
 const express = require('express');
@@ -37,6 +48,7 @@ const translateRouter = require('./routes/translate');
 const { generateLetterAvatar } = require('./utils/avatarGenerator');
 const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt
+const { getSettings, updateSetting } = require('./services/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3011;
@@ -80,8 +92,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Custom middleware to handle cache control for video file
+app.use('/videos/background.mp4', (req, res, next) => {
+  // Allow caching for 1 year, but require revalidation
+  res.setHeader('Cache-Control', 'public, max-age=31536000, must-revalidate');
+  next();
+});
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
@@ -90,7 +112,24 @@ const transporter = nodemailer.createTransport({
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Verify email configuration on startup
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('Email verification failed:', error);
+    console.error('Email config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
+      to: process.env.EMAIL_TO,
+      pass_length: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 0
+    });
+  } else {
+    console.log('Email server is ready to send messages');
   }
 });
 
@@ -172,6 +211,20 @@ const logoUpload = multer({
       return cb(new Error('Only image files are allowed!'));
     }
     cb(null, true);
+  }
+});
+
+// Create directories for uploads if they don't exist
+const uploadDirs = {
+  logo: path.join(__dirname, '..', 'public', 'images', 'logo'),
+  team: path.join(__dirname, '..', 'public', 'images', 'team'),
+  about: path.join(__dirname, '..', 'public', 'images', 'about'),
+  video: path.join(__dirname, '..', 'public', 'videos')
+};
+
+Object.values(uploadDirs).forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 });
 
@@ -572,6 +625,28 @@ app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
     const id = parseInt(req.params.id);
     const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
+    // Get current section to handle image removal
+    const currentSection = db.about.getSectionById(id);
+    if (!currentSection) {
+      return res.status(404).json({ success: false, message: 'Section not found' });
+    }
+
+    // Handle image removal if image_url is null or empty
+    if (image_url === null || image_url === '') {
+      // Try to delete the old image file if it exists
+      if (currentSection.image_url && currentSection.image_url.startsWith('/images/about/')) {
+        const oldImagePath = path.join(__dirname, '..', 'public', currentSection.image_url);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete about section image file:', err.message);
+          } else {
+            console.log('Successfully deleted about section image file:', oldImagePath);
+          }
+        });
+      }
+    }
+    
     const success = db.about.updateSection(id, {
       title,
       fr_title,
@@ -595,9 +670,27 @@ app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
 app.delete('/api/admin/about/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // Get the section's current image URL before deleting
+    const section = db.about.getSectionById(id);
+    if (!section) {
+      return res.status(404).json({ success: false, message: 'Section not found' });
+    }
+
+    // Delete the section from the database
     const success = db.about.deleteSection(id);
     
     if (success) {
+      // Try to delete the image file if it exists
+      if (section.image_url && section.image_url.startsWith('/images/about/')) {
+        const imagePath = path.join(__dirname, '..', 'public', section.image_url);
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete about section image file:', err.message);
+          }
+        });
+      }
       res.json({ success: true });
     } else {
       res.status(404).json({ success: false, message: 'Section not found' });
@@ -903,6 +996,89 @@ app.post('/api/admin/logo', auth.isAuthenticated, auth.isAdmin, logoUpload.singl
   }
 });
 
+// Configure multer for video uploads
+const videoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const videosDir = path.join(__dirname, '..', 'public', 'videos');
+    if (!fs.existsSync(videosDir)) {
+      fs.mkdirSync(videosDir, { recursive: true });
+    }
+    cb(null, videosDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'background.mp4');
+  }
+});
+
+const videoUpload = multer({
+  storage: videoStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (!file.mimetype.startsWith('video/')) {
+      return cb(new Error('Only video files are allowed!'));
+    }
+    cb(null, true);
+  }
+});
+
+// Video upload endpoint
+app.post('/api/settings/upload-video', auth.isAdmin, videoUpload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    // Validate file type
+    if (!req.file.mimetype.startsWith('video/')) {
+      return res.status(400).json({ error: 'File must be a video' });
+    }
+
+    // Generate a version timestamp
+    const version = Date.now();
+
+    // Update settings with the new video path and version
+    const videoPath = '/videos/background.mp4';
+    await updateSetting('heroVideoPath', videoPath);
+    await updateSetting('heroVideoVersion', version.toString());
+
+    res.json({ videoPath, version });
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    
+    // Handle specific multer errors
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        error: 'Video file is too large. Maximum size is 50MB. Please compress your video or choose a smaller file.' 
+      });
+    }
+    
+    res.status(500).json({ error: 'Failed to upload video' });
+  }
+});
+
+// Video deletion endpoint
+app.delete('/api/settings/delete-video', auth.isAdmin, async (req, res) => {
+  try {
+    // Delete the video file
+    const videoPath = path.join(__dirname, '..', 'public', 'videos', 'background.mp4');
+    if (fs.existsSync(videoPath)) {
+      fs.unlinkSync(videoPath);
+      console.log('Video file deleted successfully:', videoPath);
+    }
+
+    // Update settings to remove the video path and version
+    await updateSetting('heroVideoPath', '');
+    await updateSetting('heroVideoVersion', '');
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting video:', error);
+    res.status(500).json({ error: 'Failed to delete video' });
+  }
+});
+
 // Generate captcha endpoint
 app.get('/api/captcha', (req, res) => {
   // Create a captcha with options - simplified configuration
@@ -1013,19 +1189,26 @@ app.post('/api/send-email', async (req, res) => {
   }
   
   try {
-    const { name, email, subject, message } = req.body;
-    
+    const { name, email, message } = req.body;
+
     // Validate input
     if (!name || !email || !message) {
       return res.status(400).json({ success: false, message: 'Please provide name, email, and message' });
     }
     
-    // Email options
+    console.log('Attempting to send email with config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
+      to: process.env.EMAIL_TO
+    });
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: process.env.EMAIL_TO,
       replyTo: email,
-      subject: subject || `New message from ${name} via website`,
+      subject: `New message from ${name} via website`,
       text: `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`,
       html: `
         <h3>Contact Form Submission</h3>
@@ -1036,19 +1219,29 @@ app.post('/api/send-email', async (req, res) => {
       `
     };
     
+    console.log('Sending email with options:', mailOptions);
+    
     // Send email
     const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info);
     
     // Reset captcha verification after successful submission
     req.session.captchaVerified = false;
     
     res.status(200).json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
-    console.error('Error sending email:', error.message);
+    console.error('Error sending email:', error);
+    console.error('Full error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
     
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to send email'
+      message: 'Failed to send email',
+      error: error.message
     });
   }
 });
@@ -1096,7 +1289,7 @@ app.get('/api/settings', (req, res) => {
   try {
     // Only return specific settings that are safe to expose publicly
     const settings = db.settings.getAllSettings().filter(setting => 
-      ['contact_email', 'site_name'].includes(setting.key)
+      ['contact_email', 'site_name', 'heroVideoPath', 'heroVideoVersion'].includes(setting.key)
     );
     res.json({ success: true, settings });
   } catch (error) {
@@ -1286,6 +1479,147 @@ app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
 
 // Routes
 app.use('/api/translate', translateRouter);
+
+// Stop setup service endpoint
+app.post('/api/admin/setup/stop', auth.isAdmin, (req, res) => {
+  try {
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    // Create the flag file to disable setup
+    fs.writeFile(flagPath, '', (writeError) => {
+      if (writeError) {
+        console.error('Error creating setup disabled flag:', writeError);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to disable setup service',
+          details: writeError.message
+        });
+      }
+
+      // Kill processes listening on setup ports
+      exec('lsof -ti:3012,3013 | xargs kill -9 2>/dev/null || true', (error) => {
+        if (error && error.code !== 1) { // Ignore "no process found" error
+          console.error('Error killing setup processes:', error);
+        }
+        
+        res.json({ 
+          success: true, 
+          message: 'Setup service stopped and disabled successfully',
+          output: 'Setup service stopped and disabled'
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Error in stop setup service endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Start setup service endpoint
+app.post('/api/admin/setup/start', auth.isAdmin, (req, res) => {
+  try {
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    // Remove the flag file to enable setup
+    fs.unlink(flagPath, (unlinkError) => {
+      if (unlinkError) {
+        console.error('Error removing setup disabled flag:', unlinkError);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to enable setup service',
+          details: unlinkError.message
+        });
+      }
+
+      // Start the service in the background
+      const setupProcess = spawn('npm', ['run', 'start'], { 
+        cwd: setupPath,
+        detached: true,
+        stdio: 'ignore'
+      });
+
+      // Unref the process so it can run independently
+      setupProcess.unref();
+
+      res.json({ 
+        success: true, 
+        message: 'Setup service started and enabled successfully',
+        output: 'Setup service started in the background'
+      });
+    });
+  } catch (error) {
+    console.error('Error in start setup service endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Check if a port is in use
+const isPortInUse = (port) => {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    
+    server.once('listening', () => {
+      server.close();
+      resolve(false);
+    });
+    
+    server.listen(port);
+  });
+};
+
+// Check setup service status endpoint
+app.get('/api/admin/setup/status', auth.isAdmin, async (req, res) => {
+  try {
+    const [port3012InUse, port3013InUse] = await Promise.all([
+      isPortInUse(3012),
+      isPortInUse(3013)
+    ]);
+    
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    const setupExists = fs.existsSync(setupPath);
+    const isDisabled = fs.existsSync(flagPath);
+    
+    res.json({
+      success: true,
+      isRunning: port3012InUse || port3013InUse,
+      ports: {
+        3012: port3012InUse,
+        3013: port3013InUse
+      },
+      directories: {
+        setup: setupExists,
+        disabled: isDisabled
+      }
+    });
+  } catch (error) {
+    console.error('Error checking setup service status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check setup service status',
+      details: error.message
+    });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

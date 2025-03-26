@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "api": "cd api && PORT=3013 npm run start",
     "preview": "vite preview",
-    "start": "concurrently \"npm run dev\" \"npm run api\""
+    "start": "concurrently \"npm run dev\" \"npm run api\"",
+    "stop": "lsof -ti:3012,3013 | xargs -r kill -9"
   },
   "dependencies": {
     "react": "^18.2.0",

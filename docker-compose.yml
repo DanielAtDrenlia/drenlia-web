@@ -1,0 +1,46 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "3010:3010"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/usr/share/nginx/html:ro
+    depends_on:
+      - app
+    networks:
+      - drenlia-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3010
+      - CHOKIDAR_USEPOLLING=false
+      - FAST_REFRESH=false
+      - WATCHPACK_POLLING=false
+    volumes:
+      - .:/app:delegated
+      - /app/node_modules
+      - /app/server/node_modules
+      - /app/setup/node_modules
+      - /app/setup/api/node_modules
+      - ./server/database.sqlite:/app/server/database.sqlite
+    command: >
+      sh -c "npm install &&
+             cd server && npm install &&
+             cd ../setup && npm install &&
+             cd api && npm install &&
+             cd ../.. &&
+             if [ -f \"/app/.setup-disabled\" ]; then
+               concurrently 'npm run start' 'npm run server';
+             else
+               concurrently 'npm run start' 'npm run server' 'npm run setup';
+             fi"
+    networks:
+      - drenlia-network
+
+networks:
+  drenlia-network:
+    driver: bridge 

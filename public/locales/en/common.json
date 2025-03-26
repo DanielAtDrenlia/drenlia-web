@@ -21,7 +21,7 @@
       "title": "Contact Info",
       "email": "info@yourcompany.com",
       "phone": "+1 (555) 123-4567",
-      "phone_tooltip": "This is obviously a phony number!\nPlease send us an email.",
+      "phone_tooltip": "This is obviously a phony number! Please send us an email.",
       "address": "1234 Rue de la Paix, Ville de Montréal, QC, H3Z 2Y7, Canada"
     },
     "copyright": "© {{year}} Your Company. All rights reserved."
