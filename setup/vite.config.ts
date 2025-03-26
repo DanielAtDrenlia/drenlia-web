@@ -16,7 +16,6 @@ export default defineConfig({
       }
     },
     allowedHosts: [
-      'dev.drenlia.com',
       'localhost',
       '127.0.0.1'
     ]

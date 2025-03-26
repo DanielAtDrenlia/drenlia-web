@@ -26,7 +26,7 @@ services:
       - /app/server/node_modules
       - /app/setup/node_modules
       - /app/setup/api/node_modules
-      - ./server/database.sqlite:/app/server/database.sqlite
+      - ./server:/app/server
     command: >
       sh -c "npm install &&
              cd server && npm install &&
@@ -43,4 +43,4 @@ services:
 
 networks:
   drenlia-network:
-    driver: bridge 
+    driver: bridge
