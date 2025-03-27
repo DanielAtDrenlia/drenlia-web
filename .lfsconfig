@@ -1,0 +1,4 @@
+[lfs]
+    fetchinclude = docs/images/*.png
+    fetch = include
+    url = ssh://git@lab01.private.drenlia.com/devs/drenlia-web.git/info/lfs 
