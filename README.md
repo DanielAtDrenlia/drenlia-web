@@ -1,17 +1,66 @@
-# Drenlia Web Application
+# Your Professional Web Presence, Simplified
 
-This repository contains a full-stack web application with a React frontend, Node.js backend, and setup service. The application is containerized using Docker and uses Nginx as a reverse proxy.
+Transform your organization's online presence with this modern, bilingual web application. Built for professionals who need a sleek, maintainable website without the complexity of traditional website builders.
+
+## Key Features
+
+### 🌐 Bilingual Ready
+- Present your content in two languages: English and French
+- Seamless language switching
+- Optional Google Translate integration for automated translations
+
+### 👥 Team Showcase
+- Highlight your team members with professional profiles
+- Customizable bios and roles
+- Upload pictures of your members
+- Easy-to-manage team section
+
+### 📝 Dynamic Content Management
+- Craft your story through customizable "About" sections with drag-and-drop ordering
+- Update content easily through an intuitive admin interface
+- No coding required for content updates
+
+### 🔒 Secure and Professional
+- Built-in user management system
+- Google OAuth integration (optional)
+- Professional email integration
+- Secure admin interface
+
+### 🎨 Clean, Modern Design
+- Responsive layout that works on all devices
+- Professional appearance out of the box
+- Customizable to match your brand
+
+### 💼 Perfect For
+- Professional Service Firms
+- Consulting Companies
+- Small to Medium Businesses
+- Non-Profit Organizations
+- Any team wanting a professional web presence
+
+## Technical Details
+
+<details>
+<summary>Click to expand technical information</summary>
+
+This is a full-stack web application built with:
+- React frontend
+- Node.js backend
+- SQLite database
+- Docker containerization
+- Nginx reverse proxy
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- A web server (Reverse Proxy)
+- Docker and Docker Compose V2
 - Git
 
 ## Project Structure
 
 ```
 .
-├── public/           # Static files served by Nginx
+├── public/          # Static files served by Nginx
 ├── src/             # React frontend source code
 ├── server/          # Backend server
 ├── setup/           # Setup service for initial configuration
@@ -59,10 +108,6 @@ cd drenlia-web
        }
      })
      ```
-   - After making changes to configuration files, restart the container:
-     ```bash
-     docker restart drenlia-web-app-1
-     ```
 
 3. Start the application:
 ```bash
@@ -85,18 +130,18 @@ Once the application is running and accessible in your browser, follow these ste
 
 2. Complete the following setup sections:
 
-   ### Frontend Environment
+   ### 1- Frontend Environment
    - This section can be skipped as it contains default values that work well for most installations.
 
-   ### Backend Environment
+   ### 2- Backend Environment
    
    #### Server Configuration
+   - Port 3011 should not be changed
    - Set the Frontend URL (e.g., `http://localhost:3010` for local development)
    - Add your domain to Allowed Origins:
      ```
      http://localhost:3010,http://yourdomain.com,https://yourdomain.com
      ```
-   - Configure the Session Secret (a secure random string for session management)
 
    #### Email Configuration
    - Configure your SMTP settings:
@@ -105,7 +150,9 @@ Once the application is running and accessible in your browser, follow these ste
      - SMTP Username
      - SMTP Password
      - From Email Address
-   - Test the email configuration to ensure emails can be sent
+     - Email To
+
+   - Configure the Session Secret (a secure random string for session management)
 
    #### Google OAuth Configuration (Optional)
    - Enable Google login by setting:
@@ -122,7 +169,7 @@ Once the application is running and accessible in your browser, follow these ste
    - Add your Google Cloud Translation API key to enable automatic translations
    - If not configured, you'll need to manually input content in both languages
 
-3. Create Admin User
+   ### 3- Admin User
    - Set up your administrator account:
      - First Name
      - Last Name
@@ -130,17 +177,17 @@ Once the application is running and accessible in your browser, follow these ste
      - Password (use a strong password)
    - This account will have full access to the admin interface
 
-4. Site Settings
+   ### 4- Site Settings
    - Configure basic site information:
+     - Version can be left as is
      - Company Name
      - Contact Email (displayed in the website footer)
-     - Other optional settings as needed
 
 5. Complete Setup
    - Review all settings
    - Click "Save All Settings"
 
-### Accessing the Admin Interface
+## Accessing the Admin Interface
 
 After completing the setup, you can access the admin interface at:
 ```
@@ -153,7 +200,7 @@ Use the admin credentials you created during setup to log in.
 
 Once logged in, you'll have access to the following features:
 
-#### Dashboard
+### Dashboard
 The dashboard provides an overview of your content and quick access to all administrative functions. You'll see:
 - Total number of About Sections
 - Total Team Members
@@ -161,7 +208,7 @@ The dashboard provides an overview of your content and quick access to all admin
 - Quick access links to all major sections
 - Quick Tips for managing your website
 
-#### Content Management
+### Content Management
 - **About Sections**: Edit your About page content, including your story, mission, and values. You can add, edit, and reorder sections to create a compelling narrative about your organization.
 
 - **Team Members**: Manage your team profiles by adding or editing:
@@ -177,14 +224,17 @@ The dashboard provides an overview of your content and quick access to all admin
   - Manage admin access levels
   - Maintain security through user management
 
-#### Settings
-Configure site-wide settings including:
-- Visual assets (logos, images)
-- General website settings
-- Content translations
-- Website appearance and functionality
+#### About User Management
 
-#### Security Notice
+After adding your team members, you can create non-administrative accounts for your members.  This will allow them to login and update their own profile and bio.  A regular user can only edit the profile that is matching the email used to login.
+
+### Settings
+Configure site-wide settings including:
+- Visual assets (logo, background video used on the homepage)
+- General website settings
+- Site Content translations: all of the text found on all pages in English and French
+
+### Security Notice
 A security warning will be displayed on the Dashboard if the Setup Service is still running. For security reasons, make sure to disable the setup service when not in use by clicking the "Disable Setup Service" button in the top-right corner of the Dashboard.
 
 ## Services
@@ -224,7 +274,6 @@ cd api && npm install
 ```bash
 npm run dev
 ```
-
 This will start:
 - Frontend on port 3010
 - Backend on port 3011
@@ -298,3 +347,5 @@ Under the condition that you must:
 - State significant changes made to the software
 - Include the source code or provide a way to obtain it
 - Use the same license for derivative works
+</details>
+
