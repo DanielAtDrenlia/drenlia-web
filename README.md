@@ -2,7 +2,7 @@
 
 Transform your organization's online presence with this modern, bilingual web application. Built for professionals who need a sleek, maintainable website without the complexity of traditional website builders.
 
-<img src="website-homepage.png" alt="Drenlia Web Homepage" width="100%">
+<img src="docs/images/website-homepage.png" alt="Drenlia Web Homepage" width="100%">
 
 ## Key Features
 
