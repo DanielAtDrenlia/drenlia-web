@@ -68,6 +68,7 @@ This is a full-stack web application built with:
 ├── docker-compose.yml
 └── Dockerfile
 ```
+</details>
 
 ## Quick Start
 
@@ -196,7 +197,7 @@ http://yourdomain.com/admin
 
 Use the admin credentials you created during setup to log in.
 
-*IMPORTANT*: YOU NEED TO disable the setup page.  Click the button in the Dashboard to do so.
+**IMPORTANT**: YOU NEED TO disable the setup page.  Click the button in the Dashboard to do so.
 
 Once logged in, you'll have access to the following features:
 
@@ -226,18 +227,42 @@ The dashboard provides an overview of your content and quick access to all admin
 
 #### About User Management
 
-After adding your team members, you can create non-administrative accounts for your members.  This will allow them to login and update their own profile and bio.  A regular user can only edit the profile that is matching the email used to login.
+After adding your team members, you can create non-administrative accounts allowing them to login and update their own profile and bio.  A regular user can only edit the profile that is matching the email used to login.
 
 ### Settings
 Configure site-wide settings including:
-- Visual assets (logo, background video used on the homepage)
+- Visual assets (logo and background video used on the homepage)
 - General website settings
 - Site Content translations: all of the text found on all pages in English and French
 
 ### Security Notice
 A security warning will be displayed on the Dashboard if the Setup Service is still running. For security reasons, make sure to disable the setup service when not in use by clicking the "Disable Setup Service" button in the top-right corner of the Dashboard.
 
+## SSL Certificate with LetsEncrypt
+
+To secure your website with HTTPS, you can use Let's Encrypt to obtain a free SSL certificate. The process varies depending on your host's operating system and web server. Here's a basic example for Ubuntu with Nginx:
+
+1. Install Certbot and the Nginx plugin:
+   ```bash
+   sudo apt update
+   sudo apt install certbot python3-certbot-nginx
+   ```
+
+2. Obtain and install the certificate:
+   ```bash
+   sudo certbot --nginx -d yourdomain.com
+   ```
+   Replace `yourdomain.com` with your actual domain name.
+
+For other operating systems and web servers, refer to:
+- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
+- [Certbot Installation Guide](https://certbot.eff.org/instructions)
+- [Web Server-specific SSL Configuration Guides](https://letsencrypt.org/docs/using.html#web-servers)
+
 ## Services
+
+<services>
+<summary>Click to expand services information</summary>
 
 ### Frontend (Port 3010)
 - React application
@@ -258,39 +283,10 @@ A security warning will be displayed on the Dashboard if the Setup Service is st
 - Backend API for the setup service
 - Handles configuration storage and validation
 
-## Development
+### Database
+- The application uses SQLite as its database. The database file is located at `server/database.sqlite` and is persisted through Docker volumes.
 
-### Local Development
-
-1. Install dependencies:
-```bash
-npm install
-cd server && npm install
-cd ../setup && npm install
-cd api && npm install
-```
-
-2. Start development servers:
-```bash
-npm run dev
-```
-This will start:
-- Frontend on port 3010
-- Backend on port 3011
-- Setup service on port 3012
-- Setup API on port 3013
-
-### Building for Production
-
-```bash
-npm run build
-```
-
-The build output will be in the `build/` directory.
-
-## Database
-
-The application uses SQLite as its database. The database file is located at `server/database.sqlite` and is persisted through Docker volumes.
+</services>
 
 ## Troubleshooting
 
@@ -347,5 +343,5 @@ Under the condition that you must:
 - State significant changes made to the software
 - Include the source code or provide a way to obtain it
 - Use the same license for derivative works
-</details>
+
 
