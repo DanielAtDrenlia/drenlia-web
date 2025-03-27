@@ -1,6 +1,6 @@
 # Application Screenshots
 
-This page showcases the various screens and features of the application. Use the navigation arrows to move between screenshots.
+This page showcases the various screens and features of the application.
 
 ## Public Website
 
