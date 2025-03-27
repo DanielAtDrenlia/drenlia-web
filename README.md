@@ -38,6 +38,14 @@ Transform your organization's online presence with this modern, bilingual web ap
 - Non-Profit Organizations
 - Any team wanting a professional web presence
 
+## Screenshots
+
+View our comprehensive [Screenshots Gallery](docs/screenshots.md) showcasing the application's features and interface.
+
+> **Note**: This project uses Git LFS (Large File Storage) for screenshots. To view the screenshots locally, you'll need to:
+> 1. Install Git LFS: `git lfs install`
+> 2. Pull the LFS files: `git lfs pull`
+
 ## Technical Details
 
 <details>
@@ -116,9 +124,8 @@ docker-compose up -d
 ```
 
 The application will be available at:
-- Frontend: http://localhost:3010 (or your custom domain)
-- Backend API: http://localhost:3010/api (or your custom domain/api)
-- Setup Service: http://localhost:3010/setup (or your custom domain/setup)
+- Frontend: http://localhost:3010 (or your custom domain http://your-domain.com)
+- Setup Service: http://localhost:3010/setup (or your custom domain http://your-domain.com/setup)
 
 ## Initial Setup
 
@@ -131,10 +138,10 @@ Once the application is running and accessible in your browser, follow these ste
 
 2. Complete the following setup sections:
 
-   ### 1- Frontend Environment
+   ### 1 - Frontend Environment
    - This section can be skipped as it contains default values that work well for most installations.
 
-   ### 2- Backend Environment
+   ### 2 - Backend Environment
    
    #### Server Configuration
    - Port 3011 should not be changed
@@ -170,7 +177,7 @@ Once the application is running and accessible in your browser, follow these ste
    - Add your Google Cloud Translation API key to enable automatic translations
    - If not configured, you'll need to manually input content in both languages
 
-   ### 3- Admin User
+   ### 3 - Admin User
    - Set up your administrator account:
      - First Name
      - Last Name
@@ -178,13 +185,13 @@ Once the application is running and accessible in your browser, follow these ste
      - Password (use a strong password)
    - This account will have full access to the admin interface
 
-   ### 4- Site Settings
+   ### 4 - Site Settings
    - Configure basic site information:
      - Version can be left as is
      - Company Name
      - Contact Email (displayed in the website footer)
 
-5. Complete Setup
+   ### Complete Setup
    - Review all settings
    - Click "Save All Settings"
 
@@ -261,7 +268,7 @@ For other operating systems and web servers, refer to:
 
 ## Services
 
-<services>
+<details>
 <summary>Click to expand services information</summary>
 
 ### Frontend (Port 3010)
@@ -286,7 +293,7 @@ For other operating systems and web servers, refer to:
 ### Database
 - The application uses SQLite as its database. The database file is located at `server/database.sqlite` and is persisted through Docker volumes.
 
-</services>
+</details>
 
 ## Troubleshooting
 
