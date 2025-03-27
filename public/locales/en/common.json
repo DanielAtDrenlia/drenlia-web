@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "contact": "Contact",
+    "login": "Login",
+    "admin": "Admin"
+  },
+  "footer": {
+    "about": {
+      "title": "About Us",
+      "description": "We create innovative solutions for modern problems. Explore our services and projects."
+    },
+    "links": {
+      "title": "Quick Links",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    },
+    "contact": {
+      "title": "Contact Info",
+      "email": "info@yourcompany.com",
+      "phone": "+1 (555) 123-4567",
+      "phone_tooltip": "This is obviously a phony number! Please send us an email.",
+      "address": "1234 Rue de la Paix, Ville de Montréal, QC, H3Z 2Y7, Canada"
+    },
+    "copyright": "© {{year}} Your Company. All rights reserved."
+  },
+  "loading": "Loading...",
+  "error": {
+    "generic": "An error occurred. Please try again.",
+    "notFound": "Page not found"
+  }
+}

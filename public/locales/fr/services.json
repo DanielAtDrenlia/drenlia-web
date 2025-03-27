@@ -1,0 +1,30 @@
+{
+  "title": "Nos Services",
+  "subtitle": "Découvrez comment nous pouvons transformer votre entreprise grâce à notre gamme complète de services.",
+  "categories": {
+    "service1": {
+      "title": "Service Client",
+      "description": "Nous aidons les entreprises à améliorer leurs interactions avec les clients grâce à des solutions de support complètes et des stratégies d'amélioration de la satisfaction."
+    },
+    "service2": {
+      "title": "Formation & Éducation",
+      "description": "Nos consultants experts fournissent des programmes de formation et des solutions éducatives adaptés pour développer les compétences et les connaissances de votre équipe."
+    },
+    "service3": {
+      "title": "Marketing & Image de Marque",
+      "description": "Nous vous aidons à construire une identité de marque forte et à développer des stratégies marketing efficaces pour augmenter votre visibilité sur le marché."
+    },
+    "service4": {
+      "title": "Planification Financière",
+      "description": "Nos services complets de planification financière vous aident à gérer efficacement vos ressources et à développer des stratégies financières solides."
+    },
+    "service5": {
+      "title": "Gestion des Opérations",
+      "description": "Nous mettons en œuvre des processus opérationnels efficaces pour optimiser vos activités quotidiennes et améliorer l'efficacité globale de votre entreprise."
+    },
+    "service6": {
+      "title": "Planification Stratégique",
+      "description": "Avec notre expertise en planification stratégique, nous aidons les organisations à définir des objectifs clairs et à développer des chemins efficaces pour les atteindre."
+    }
+  }
+} 
