@@ -1,5 +1,6 @@
 services:
   nginx:
+    restart: unless-stopped
     image: nginx:alpine
     ports:
       - "3010:3010"
@@ -12,6 +13,7 @@ services:
       - drenlia-network
 
   app:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
