@@ -98,6 +98,7 @@ cd drenlia-web
          server_name your-domain.com;
 
          location / {
+             client_max_body_size 50M; # Important to allow file uploads up to 50M
              proxy_pass http://localhost:3010;
              proxy_http_version 1.1;
              proxy_set_header Upgrade $http_upgrade;
