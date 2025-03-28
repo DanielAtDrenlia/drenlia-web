@@ -3,14 +3,15 @@
     "home": "Accueil",
     "about": "À propos",
     "services": "Services",
+    "projects": "Projets",
     "contact": "Contact",
     "login": "Connexion",
     "admin": "Admin"
   },
   "footer": {
     "about": {
-      "title": "À propos",
-      "description": "Nous créons des solutions innovantes pour les problèmes modernes. Découvrez nos services."
+      "title": "À propos de nous",
+      "description": "Nous créons des solutions innovantes pour les problèmes modernes. Découvrez nos services et projets."
     },
     "links": {
       "title": "Liens rapides",
@@ -21,7 +22,7 @@
       "title": "Coordonnées",
       "email": "info@yourcompany.com",
       "phone": "+1 (555) 123-4567",
-      "phone_tooltip": "C'est évidemment un faux numéro ! Contactez-nous par e-mail svp.",
+      "phone_tooltip": "C'est évidemment un faux numéro ! Veuillez nous envoyer un courriel.",
       "address": "1234 Rue de la Paix, Ville de Montréal, QC, H3Z 2Y7, Canada"
     },
     "copyright": "© {{year}} Votre Entreprise. Tous droits réservés."

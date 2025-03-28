@@ -8,6 +8,7 @@ import ScrollToTopButton from './components/ScrollToTopButton';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import ProjectsPage from './pages/ProjectsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -44,6 +45,7 @@ function App() {
               <Route key={lang} path={`/${lang}`} element={<Layout><Outlet /></Layout>}>
                 <Route index element={<HomePage />} />
                 <Route path="about" element={<AboutPage />} />
+                <Route path="projects" element={<ProjectsPage />} />
                 <Route path="contact" element={<ContactPage />} />
               </Route>
             ))}

@@ -276,6 +276,14 @@ const Navbar: React.FC = () => {
               </>
             </NavLinkContent>
           </NavLinkButton>
+          <StyledNavLink to={getLangPath('/projects')}>
+            <NavLinkContent>
+              <>
+                {t('nav.projects', { defaultValue: 'Projects' })}
+                <ActiveIndicator isActive={isActive('/projects')} />
+              </>
+            </NavLinkContent>
+          </StyledNavLink>
           <StyledNavLink to={getLangPath('/about')}>
             <NavLinkContent>
               <>

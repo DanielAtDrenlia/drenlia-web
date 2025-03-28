@@ -1,0 +1,18 @@
+{
+  "title": "Our Projects",
+  "subtitle": "Discover our portfolio of successful digital solutions",
+  "filters": {
+    "all": "All",
+    "web": "Web",
+    "mobile": "Mobile"
+  },
+  "status": {
+    "completed": "Completed",
+    "in-progress": "In Progress"
+  },
+  "actions": {
+    "viewOnGitHub": "View on GitHub",
+    "viewProject": "View Project",
+    "demo": "Live Demo"
+  }
+} 
