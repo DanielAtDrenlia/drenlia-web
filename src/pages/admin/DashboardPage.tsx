@@ -40,6 +40,15 @@ const DashboardPage: React.FC = () => {
       )
     },
     { 
+      path: '/admin/projects', 
+      label: 'Projects',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 3H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-6l-2-2z" />
+        </svg>
+      )
+    },
+    { 
       path: '/admin/team', 
       label: 'Team Members',
       icon: (

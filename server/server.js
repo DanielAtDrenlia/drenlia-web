@@ -136,6 +136,7 @@ transporter.verify(function(error, success) {
 // Configure multer for file uploads
 const teamImagesDir = path.join(__dirname, '../public/images/team');
 const aboutImagesDir = path.join(__dirname, '../public/images/about');
+const projectImagesDir = path.join(__dirname, '../public/images/projects');
 
 // Ensure the directories exist
 if (!fs.existsSync(teamImagesDir)) {
@@ -143,6 +144,9 @@ if (!fs.existsSync(teamImagesDir)) {
 }
 if (!fs.existsSync(aboutImagesDir)) {
   fs.mkdirSync(aboutImagesDir, { recursive: true });
+}
+if (!fs.existsSync(projectImagesDir)) {
+  fs.mkdirSync(projectImagesDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
@@ -152,6 +156,8 @@ const storage = multer.diskStorage({
       cb(null, teamImagesDir);
     } else if (req.originalUrl.includes('/upload/about-image')) {
       cb(null, aboutImagesDir);
+    } else if (req.originalUrl.includes('/upload/project-image')) {
+      cb(null, projectImagesDir);
     } else {
       // Default to team images directory
       cb(null, teamImagesDir);
@@ -1618,6 +1624,110 @@ app.get('/api/admin/setup/status', auth.isAdmin, async (req, res) => {
       error: 'Failed to check setup service status',
       details: error.message
     });
+  }
+});
+
+// Project endpoints
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await db.project.getAllProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+app.get('/api/projects/:id', async (req, res) => {
+  try {
+    const project = await db.project.getProjectById(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
+});
+
+// Admin project endpoints
+app.post('/api/admin/projects', auth.isAdmin, async (req, res) => {
+  try {
+    const result = await db.project.createProject(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
+app.put('/api/admin/projects/reorder', auth.isAdmin, (req, res) => {
+  try {
+    const { projects } = req.body;
+    
+    if (!Array.isArray(projects) || projects.length === 0) {
+      return res.status(400).json({ success: false, message: 'Projects array is required' });
+    }
+    
+    const success = db.project.updateProjectOrders(projects);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to update project orders' });
+    }
+  } catch (error) {
+    console.error('Error updating project orders:', error);
+    res.status(500).json({ success: false, message: 'Error updating project orders' });
+  }
+});
+
+app.put('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const success = await db.project.updateProject(req.params.id, req.body);
+    if (!success) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+app.delete('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const success = await db.project.deleteProject(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// File upload endpoint for project images
+app.post('/api/admin/upload/project-image', auth.isAdmin, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    
+    // Return the path to the uploaded file (relative to public directory)
+    const imagePath = `/images/projects/${req.file.filename}`;
+    
+    res.json({ 
+      success: true, 
+      imagePath: imagePath
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ success: false, message: 'Error uploading file' });
   }
 });
 

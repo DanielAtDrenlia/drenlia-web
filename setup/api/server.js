@@ -121,6 +121,25 @@ const ensureDbReady = async () => {
             )
           `);
 
+          // Create projects table
+          db.run(`
+            CREATE TABLE IF NOT EXISTS projects (
+              project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              description TEXT NOT NULL,
+              display_order INTEGER NOT NULL DEFAULT 0,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              image_url TEXT,
+              fr_title TEXT,
+              fr_description TEXT,
+              type TEXT NOT NULL,
+              type_fr TEXT,
+              git_url TEXT,
+              demo_url TEXT
+            )
+          `);
+
           // Create team table
           db.run(`
             CREATE TABLE IF NOT EXISTS team (
@@ -588,6 +607,190 @@ apiRouter.get('/backend-env', async (req, res) => {
     res.json(defaultValues.backend);
   }
 });
+
+// About endpoints
+app.get('/api/about', async (req, res) => {
+  try {
+    const sections = await db.all('SELECT * FROM about ORDER BY display_order');
+    res.json(sections);
+  } catch (error) {
+    console.error('Error fetching about sections:', error);
+    res.status(500).json({ error: 'Failed to fetch about sections' });
+  }
+});
+
+// Project endpoints
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await db.all('SELECT * FROM projects ORDER BY display_order');
+    res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+app.get('/api/projects/:id', async (req, res) => {
+  try {
+    const project = await db.get('SELECT * FROM projects WHERE project_id = ?', [req.params.id]);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
+});
+
+app.post('/api/projects', async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      display_order,
+      image_url,
+      fr_title,
+      fr_description,
+      type,
+      type_fr,
+      git_url,
+      demo_url
+    } = req.body;
+
+    const result = await db.run(
+      `INSERT INTO projects (
+        title,
+        description,
+        display_order,
+        image_url,
+        fr_title,
+        fr_description,
+        type,
+        type_fr,
+        git_url,
+        demo_url,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [
+        title,
+        description,
+        display_order,
+        image_url,
+        fr_title,
+        fr_description,
+        type,
+        type_fr,
+        git_url,
+        demo_url
+      ]
+    );
+
+    res.json({
+      id: result.lastID,
+      success: true
+    });
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      display_order,
+      image_url,
+      fr_title,
+      fr_description,
+      type,
+      type_fr,
+      git_url,
+      demo_url
+    } = req.body;
+
+    const result = await db.run(
+      `UPDATE projects 
+      SET title = ?,
+          description = ?,
+          display_order = ?,
+          image_url = ?,
+          fr_title = ?,
+          fr_description = ?,
+          type = ?,
+          type_fr = ?,
+          git_url = ?,
+          demo_url = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE project_id = ?`,
+      [
+        title,
+        description,
+        display_order,
+        image_url,
+        fr_title,
+        fr_description,
+        type,
+        type_fr,
+        git_url,
+        demo_url,
+        req.params.id
+      ]
+    );
+
+    if (result.changes === 0) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const result = await db.run('DELETE FROM projects WHERE project_id = ?', [req.params.id]);
+    if (result.changes === 0) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+app.put('/api/projects/orders', async (req, res) => {
+  try {
+    const projects = req.body;
+    await db.run('BEGIN TRANSACTION');
+
+    for (const project of projects) {
+      await db.run(
+        'UPDATE projects SET display_order = ? WHERE project_id = ?',
+        [project.display_order, project.project_id]
+      );
+    }
+
+    await db.run('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await db.run('ROLLBACK');
+    console.error('Error updating project orders:', error);
+    res.status(500).json({ error: 'Failed to update project orders' });
+  }
+});
+
+// Team endpoints
+// ... existing code ...
 
 const PORT = process.env.PORT || 3013;
 

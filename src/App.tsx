@@ -18,6 +18,7 @@ import AdminAboutPage from './pages/admin/AboutPage';
 import AdminTeamPage from './pages/admin/TeamPage';
 import AdminUsersPage from './pages/admin/UsersPage';
 import AdminSettingsPage from './pages/admin/SettingsPage';
+import AdminProjectsPage from './pages/admin/ProjectsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -55,6 +56,7 @@ function App() {
                 <Route index element={<AdminHomePage />} />
                 <Route path="about" element={<AdminAboutPage />} />
                 <Route path="team" element={<AdminTeamPage />} />
+                <Route path="projects" element={<AdminProjectsPage />} />
                 <Route path="users" element={<ProtectedRoute requireAdmin={true}><AdminUsersPage /></ProtectedRoute>} />
                 <Route path="settings" element={<ProtectedRoute requireAdmin={true}><AdminSettingsPage /></ProtectedRoute>} />
               </Route>
