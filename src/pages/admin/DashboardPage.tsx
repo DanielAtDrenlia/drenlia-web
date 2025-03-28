@@ -42,6 +42,7 @@ const DashboardPage: React.FC = () => {
     { 
       path: '/admin/projects', 
       label: 'Projects',
+      adminOnly: true,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 3H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-6l-2-2z" />
@@ -104,20 +105,22 @@ const DashboardPage: React.FC = () => {
                 </Link>
               </div>
               <nav className="hidden md:ml-8 md:flex md:space-x-6">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      isActive(item.path, item.exact)
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    }`}
-                  >
-                    <span className="mr-1.5">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
+                {navItems
+                  .filter(item => !item.adminOnly || user?.isAdmin)
+                  .map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                        isActive(item.path, item.exact)
+                          ? 'border-indigo-500 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      }`}
+                    >
+                      <span className="mr-1.5">{item.icon}</span>
+                      {item.label}
+                    </Link>
+                  ))}
               </nav>
             </div>
             <div className="hidden md:ml-6 md:flex md:items-center">
@@ -191,21 +194,23 @@ const DashboardPage: React.FC = () => {
         {/* Mobile menu */}
         <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:hidden`}>
           <div className="pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                  isActive(item.path, item.exact)
-                    ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
+            {navItems
+              .filter(item => !item.adminOnly || user?.isAdmin)
+              .map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                    isActive(item.path, item.exact)
+                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                      : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4">

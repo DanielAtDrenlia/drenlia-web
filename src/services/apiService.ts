@@ -672,4 +672,33 @@ export const uploadProjectImage = async (file: File): Promise<{ success: boolean
     console.error('Error uploading project image:', error);
     return { success: false };
   }
+};
+
+/**
+ * Update team member display orders
+ * @param members Array of member objects with new display orders
+ * @returns Promise with update result
+ */
+export const updateTeamMemberOrders = async (members: { team_id: number; display_order: number }[]): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/team/reorder`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ members }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Server error:', errorData);
+      throw new Error('Failed to update team member orders');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating team member orders:', error);
+    return { success: false };
+  }
 }; 

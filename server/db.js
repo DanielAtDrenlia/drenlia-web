@@ -529,6 +529,25 @@ const teamFunctions = {
     const stmt = getDb().prepare('DELETE FROM team WHERE team_id = ?');
     const info = stmt.run(id);
     return info.changes > 0;
+  },
+
+  /**
+   * Update team member display orders
+   * @param {Array} members - Array of member objects with new display orders
+   * @returns {boolean} True if successful
+   */
+  updateMemberOrders(members) {
+    const db = getDb();
+    const stmt = db.prepare('UPDATE team SET display_order = ? WHERE team_id = ?');
+    
+    const updateOrder = db.transaction((members) => {
+      for (const member of members) {
+        stmt.run(member.display_order, member.team_id);
+      }
+    });
+    
+    updateOrder(members);
+    return true;
   }
 };
 

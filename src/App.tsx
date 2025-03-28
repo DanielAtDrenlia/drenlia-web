@@ -56,7 +56,7 @@ function App() {
                 <Route index element={<AdminHomePage />} />
                 <Route path="about" element={<AdminAboutPage />} />
                 <Route path="team" element={<AdminTeamPage />} />
-                <Route path="projects" element={<AdminProjectsPage />} />
+                <Route path="projects" element={<ProtectedRoute requireAdmin={true}><AdminProjectsPage /></ProtectedRoute>} />
                 <Route path="users" element={<ProtectedRoute requireAdmin={true}><AdminUsersPage /></ProtectedRoute>} />
                 <Route path="settings" element={<ProtectedRoute requireAdmin={true}><AdminSettingsPage /></ProtectedRoute>} />
               </Route>

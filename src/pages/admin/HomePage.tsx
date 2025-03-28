@@ -293,7 +293,15 @@ const HomePage: React.FC = () => {
                 Edit the content of your About page, including your story, mission, and values. You can add, edit, and reorder sections to create a compelling narrative about your organization.
               </dd>
             </div>
-            <div className="bg-white px-6 py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+            {user?.isAdmin && (
+              <div className="bg-white px-6 py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                <dt className="text-sm font-medium text-gray-900">Projects</dt>
+                <dd className="mt-1 text-sm text-gray-600 sm:mt-0 sm:col-span-2">
+                  Manage your portfolio projects, including titles, descriptions, and images. You can add new projects, edit existing ones, and reorder them to showcase your best work.
+                </dd>
+              </div>
+            )}
+            <div className={`${user?.isAdmin ? 'bg-gray-50' : 'bg-white'} px-6 py-4 sm:grid sm:grid-cols-3 sm:gap-4`}>
               <dt className="text-sm font-medium text-gray-900">Team Members</dt>
               <dd className="mt-1 text-sm text-gray-600 sm:mt-0 sm:col-span-2">
                 Manage your team profiles, including names, titles, bios, and photos. Keep your team information up to date and showcase your organization's talent.

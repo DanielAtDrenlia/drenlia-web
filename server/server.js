@@ -718,6 +718,27 @@ app.get('/api/team', (req, res) => {
   }
 });
 
+// Team member reorder endpoint
+app.put('/api/admin/team/reorder', auth.isAdmin, (req, res) => {
+  try {
+    const { members } = req.body;
+    
+    if (!Array.isArray(members) || members.length === 0) {
+      return res.status(400).json({ success: false, message: 'Members array is required' });
+    }
+    
+    const success = db.team.updateMemberOrders(members);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to update team member orders' });
+    }
+  } catch (error) {
+    console.error('Error updating team member orders:', error);
+    res.status(500).json({ success: false, message: 'Error updating team member orders' });
+  }
+});
+
 app.post('/api/admin/team', auth.isAdmin, async (req, res) => {
   try {
     const { name, title, bio, image_url, display_order, fr_title, fr_bio, email } = req.body;
