@@ -29,7 +29,24 @@ services:
       - ./server:/app/server
     command: >
       sh -c "npm install &&
+             echo 'REACT_APP_API_URL=/api' > .env &&
+             echo 'WATCHPACK_POLLING=false' >> .env &&
              cd server && npm install &&
+             echo 'PORT=3011' > .env &&
+             echo 'FRONTEND_URL=http://yourdomain.com' >> .env &&
+             echo 'ALLOWED_ORIGINS=http://localhost:3010' >> .env &&
+             echo 'EMAIL_HOST=smtp.gmail.com' >> .env &&
+             echo 'EMAIL_PORT=587' >> .env &&
+             echo 'EMAIL_USER=support@mywebsite.com' >> .env &&
+             echo 'EMAIL_PASS=\"gmai lapp pass word\"' >> .env &&
+             echo 'EMAIL_FROM=no-reply@mywebsite.com' >> .env &&
+             echo 'EMAIL_TO=info@mywebsite.com' >> .env &&
+             echo 'SESSION_SECRET=company-session-secret-change-this-in-production' >> .env &&
+             echo 'GOOGLE_CLIENT_ID=yourcompanygoogleid.apps.googleusercontent.com' >> .env &&
+             echo 'GOOGLE_CLIENT_SECRET=yourcompanygoogleclientsecret' >> .env &&
+             echo 'GOOGLE_CLOUD_API_KEY=yourcompanycloudapikey' >> .env &&
+             echo 'REACT_APP_API_URL=/api' >> .env &&
+             echo 'WATCHPACK_POLLING=false' >> .env &&
              cd ../setup && npm install &&
              cd api && npm install &&
              cd ../.. &&
