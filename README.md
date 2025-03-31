@@ -88,7 +88,7 @@ git clone <repository-url>
 cd drenlia-web
 ```
 
-2. If you plan to use a custom domain, configure it now:
+2. If you plan to use a custom domain, configure it now (ON YOUR HOST or Reverse Proxy, not in the project):
    - Configure your domain's DNS to point to your server's IP address
    - Set up a reverse proxy on your host system (e.g., Apache or Nginx) to forward requests to the Docker container:
      ```nginx
@@ -108,7 +108,7 @@ cd drenlia-web
          }
      }
      ```
-   - Update the `setup/vite.config.ts` file to allow your domain:
+   - **IMPORTANT** Update the `setup/vite.config.ts` file to allow your domain:
      ```typescript
      export default defineConfig({
        server: {
