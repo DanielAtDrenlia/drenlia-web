@@ -147,6 +147,7 @@ const ensureDbReady = async () => {
               type_id INTEGER NOT NULL,
               git_url TEXT,
               demo_url TEXT,
+              status TEXT NOT NULL DEFAULT 'pending-approval',
               FOREIGN KEY (type_id) REFERENCES project_types(type_id)
             )
           `);
