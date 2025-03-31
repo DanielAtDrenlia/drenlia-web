@@ -7,6 +7,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import EditForm from './EditForm';
+import { toast } from 'react-toastify';
 
 // Update the AboutSection interface to include French fields
 interface AboutSection {
@@ -679,14 +680,20 @@ const AboutPage: React.FC = () => {
   // Handle create section
   const handleCreateSection = async () => {
     try {
+      // Validate title
+      if (!formData.title?.trim()) {
+        toast.error('Title is required');
+        return;
+      }
+
       setSavingId('new');
       const sectionToCreate = {
         title: formData.title.trim(),
-        fr_title: formData.fr_title.trim() || null,  // Set to null if empty or whitespace
-        description: formData.description.trim(),
-        fr_description: formData.fr_description.trim() || null,  // Set to null if empty or whitespace
-        image_url: formData.image_url || null,  // Set to null if empty
-        display_order: sections.length + 1  // Add to the end of the list
+        fr_title: formData.fr_title?.trim() || null,
+        description: formData.description?.trim() || '',
+        fr_description: formData.fr_description?.trim() || null,
+        image_url: formData.image_url || null,
+        display_order: sections.length + 1
       };
 
       const success = await createAboutSection(sectionToCreate);
@@ -710,7 +717,7 @@ const AboutPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error creating section:', error);
-      setError('Failed to create section. Please try again.');
+      toast.error('Failed to create section. Please try again.');
     } finally {
       setSavingId(null);
     }

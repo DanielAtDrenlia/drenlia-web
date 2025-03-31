@@ -54,17 +54,26 @@ export interface TranslationResponse {
 export interface Project {
   project_id: number;
   title: string;
-  fr_title: string | null;
   description: string;
-  fr_description: string | null;
-  image_url: string | null;
   display_order: number;
-  created_at: string;
-  updated_at: string;
-  type: string;
-  type_fr: string | null;
+  image_url: string | null;
+  fr_title: string | null;
+  fr_description: string | null;
+  type_id: number;  // Required foreign key to project_types
+  status: string;
   git_url: string | null;
   demo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Project Type interface
+export interface ProjectType {
+  type_id: number;
+  type: string;
+  fr_type: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -622,10 +631,12 @@ export const deleteProject = async (id: number): Promise<{ success: boolean }> =
 
 /**
  * Update project display orders
- * @param projects Array of project objects with new display orders
+ * @param projectOrders Array of project objects with new display orders
  * @returns Promise with update result
  */
-export const updateProjectOrders = async (projects: { project_id: number; display_order: number }[]): Promise<{ success: boolean }> => {
+export const updateProjectOrders = async (
+  projects: Array<{ project_id: number; display_order: number }>
+): Promise<{ success: boolean; error?: string }> => {
   try {
     const response = await fetch(`${API_BASE_URL}/admin/projects/reorder`, {
       method: 'PUT',
@@ -636,14 +647,23 @@ export const updateProjectOrders = async (projects: { project_id: number; displa
       body: JSON.stringify({ projects }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error('Failed to update project orders');
+      console.error('Server error:', data);
+      return { 
+        success: false, 
+        error: data.message || 'Failed to update project orders'
+      };
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Error updating project orders:', error);
-    return { success: false };
+    return { 
+      success: false, 
+      error: 'Failed to connect to server'
+    };
   }
 };
 
@@ -699,6 +719,111 @@ export const updateTeamMemberOrders = async (members: { team_id: number; display
     return await response.json();
   } catch (error) {
     console.error('Error updating team member orders:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Get all project types
+ * @returns Promise with project types array
+ */
+export const getProjectTypes = async (): Promise<ProjectType[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/project-types`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get project types');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting project types:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a new project type
+ * @param projectType The project type data
+ * @returns Promise with creation result
+ */
+export const createProjectType = async (projectType: Omit<ProjectType, 'type_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; id?: number }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectType),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating project type:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Update a project type
+ * @param id The project type ID
+ * @param projectType The project type data
+ * @returns Promise with update result
+ */
+export const updateProjectType = async (id: number, projectType: Partial<ProjectType>): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types/${id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectType),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating project type:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Delete a project type
+ * @param id The project type ID
+ * @returns Promise with deletion result
+ */
+export const deleteProjectType = async (id: number): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting project type:', error);
     return { success: false };
   }
 }; 

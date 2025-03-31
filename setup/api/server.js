@@ -121,6 +121,17 @@ const ensureDbReady = async () => {
             )
           `);
 
+          // Create project_types table
+          db.run(`
+            CREATE TABLE IF NOT EXISTS project_types (
+              type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL UNIQUE,
+              fr_type TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+
           // Create projects table
           db.run(`
             CREATE TABLE IF NOT EXISTS projects (
@@ -212,6 +223,18 @@ const ensureDbReady = async () => {
             }
           ];
 
+          // Insert default project types
+          const projectTypesData = [
+            { type: 'Web Development', fr_type: 'Développement Web' },
+            { type: 'Mobile App', fr_type: 'Application Mobile' },
+            { type: 'Desktop App', fr_type: 'Application Desktop' },
+            { type: 'API Development', fr_type: 'Développement API' },
+            { type: 'UI/UX Design', fr_type: 'Design UI/UX' },
+            { type: 'Database Design', fr_type: 'Conception de Base de Données' },
+            { type: 'Cloud Solutions', fr_type: 'Solutions Cloud' },
+            { type: 'DevOps', fr_type: 'DevOps' }
+          ];
+
           // Insert about data
           const aboutStmt = db.prepare(`
             INSERT OR IGNORE INTO about (title, description, display_order, fr_title, fr_description)
@@ -233,6 +256,17 @@ const ensureDbReady = async () => {
             teamStmt.run([item.name, item.title, item.bio, item.display_order, item.fr_title, item.fr_bio, item.email]);
           });
           teamStmt.finalize();
+
+          // Insert project types data
+          const projectTypesStmt = db.prepare(`
+            INSERT OR IGNORE INTO project_types (type, fr_type)
+            VALUES (?, ?)
+          `);
+
+          projectTypesData.forEach(item => {
+            projectTypesStmt.run([item.type, item.fr_type]);
+          });
+          projectTypesStmt.finalize();
         }
 
         db.run('COMMIT', async (err) => {
@@ -607,190 +641,6 @@ apiRouter.get('/backend-env', async (req, res) => {
     res.json(defaultValues.backend);
   }
 });
-
-// About endpoints
-app.get('/api/about', async (req, res) => {
-  try {
-    const sections = await db.all('SELECT * FROM about ORDER BY display_order');
-    res.json(sections);
-  } catch (error) {
-    console.error('Error fetching about sections:', error);
-    res.status(500).json({ error: 'Failed to fetch about sections' });
-  }
-});
-
-// Project endpoints
-app.get('/api/projects', async (req, res) => {
-  try {
-    const projects = await db.all('SELECT * FROM projects ORDER BY display_order');
-    res.json(projects);
-  } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'Failed to fetch projects' });
-  }
-});
-
-app.get('/api/projects/:id', async (req, res) => {
-  try {
-    const project = await db.get('SELECT * FROM projects WHERE project_id = ?', [req.params.id]);
-    if (!project) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
-    }
-    res.json(project);
-  } catch (error) {
-    console.error('Error fetching project:', error);
-    res.status(500).json({ error: 'Failed to fetch project' });
-  }
-});
-
-app.post('/api/projects', async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      display_order,
-      image_url,
-      fr_title,
-      fr_description,
-      type,
-      type_fr,
-      git_url,
-      demo_url
-    } = req.body;
-
-    const result = await db.run(
-      `INSERT INTO projects (
-        title,
-        description,
-        display_order,
-        image_url,
-        fr_title,
-        fr_description,
-        type,
-        type_fr,
-        git_url,
-        demo_url,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [
-        title,
-        description,
-        display_order,
-        image_url,
-        fr_title,
-        fr_description,
-        type,
-        type_fr,
-        git_url,
-        demo_url
-      ]
-    );
-
-    res.json({
-      id: result.lastID,
-      success: true
-    });
-  } catch (error) {
-    console.error('Error creating project:', error);
-    res.status(500).json({ error: 'Failed to create project' });
-  }
-});
-
-app.put('/api/projects/:id', async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      display_order,
-      image_url,
-      fr_title,
-      fr_description,
-      type,
-      type_fr,
-      git_url,
-      demo_url
-    } = req.body;
-
-    const result = await db.run(
-      `UPDATE projects 
-      SET title = ?,
-          description = ?,
-          display_order = ?,
-          image_url = ?,
-          fr_title = ?,
-          fr_description = ?,
-          type = ?,
-          type_fr = ?,
-          git_url = ?,
-          demo_url = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE project_id = ?`,
-      [
-        title,
-        description,
-        display_order,
-        image_url,
-        fr_title,
-        fr_description,
-        type,
-        type_fr,
-        git_url,
-        demo_url,
-        req.params.id
-      ]
-    );
-
-    if (result.changes === 0) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error updating project:', error);
-    res.status(500).json({ error: 'Failed to update project' });
-  }
-});
-
-app.delete('/api/projects/:id', async (req, res) => {
-  try {
-    const result = await db.run('DELETE FROM projects WHERE project_id = ?', [req.params.id]);
-    if (result.changes === 0) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
-    }
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting project:', error);
-    res.status(500).json({ error: 'Failed to delete project' });
-  }
-});
-
-app.put('/api/projects/orders', async (req, res) => {
-  try {
-    const projects = req.body;
-    await db.run('BEGIN TRANSACTION');
-
-    for (const project of projects) {
-      await db.run(
-        'UPDATE projects SET display_order = ? WHERE project_id = ?',
-        [project.display_order, project.project_id]
-      );
-    }
-
-    await db.run('COMMIT');
-    res.json({ success: true });
-  } catch (error) {
-    await db.run('ROLLBACK');
-    console.error('Error updating project orders:', error);
-    res.status(500).json({ error: 'Failed to update project orders' });
-  }
-});
-
-// Team endpoints
-// ... existing code ...
 
 const PORT = process.env.PORT || 3013;
 

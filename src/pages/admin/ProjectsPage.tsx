@@ -4,48 +4,101 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { getProjects, createProject, updateProject, deleteProject, updateProjectOrders, uploadProjectImage, Project } from '../../services/apiService';
+import { getProjects, createProject, updateProject, deleteProject, updateProjectOrders, uploadProjectImage, getProjectTypes, createProjectType, updateProjectType, deleteProjectType, Project, ProjectType } from '../../services/apiService';
+import Modal from '../../components/Modal';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+import { TFunction } from 'i18next';
+
+console.log('API_BASE_URL:', process.env.REACT_APP_API_URL);
 
 interface UploadResponse {
   success: boolean;
-  imagePath: string;
+  imagePath: string | null;
+}
+
+interface ProjectFormData {
+  title: string;
+  fr_title: string | null;
+  description: string;
+  fr_description: string | null;
+  image_url: string | null;
+  display_order: number;
+  type_id: number;
+  status: string;
+  git_url: string | null;
+  demo_url: string | null;
+}
+
+type ProjectTypeFormData = Omit<ProjectType, 'type_id' | 'created_at' | 'updated_at'>;
+
+interface ProjectCardProps {
+  project: Project;
+  onEdit: (project: Project) => void;
+  onDelete: (id: number) => Promise<void>;
+  onImageUpload: (file: File) => Promise<void>;
+  formData: ProjectFormData;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => void;
+  className?: string;
+}
+
+interface SortableProjectItemProps {
+  project: Project;
+  isEditing: boolean;
+  isAdmin: boolean;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onUpdate: (id: number) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+  onImageUpload: (file: File) => Promise<void>;
+  formData: ProjectFormData;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => void;
+  projectTypes: ProjectType[];
+  translateStatus: (t: TFunction, key: string, defaultValue: string) => string;
+}
+
+interface ApiError {
+  response?: {
+    status: number;
+  };
 }
 
 const ProjectsPage: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.isAdmin || false;
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Project>({
-    project_id: 0,
+  const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
+  const [formData, setFormData] = useState<ProjectFormData>({
     title: '',
-    fr_title: '',
+    fr_title: null,
     description: '',
-    fr_description: '',
-    image_url: '',
+    fr_description: null,
+    image_url: null,
     display_order: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    type: '',
-    type_fr: '',
-    git_url: '',
-    demo_url: ''
+    type_id: -1,
+    status: 'pending-approval',
+    git_url: null,
+    demo_url: null
   });
-  const { handleFileSelect: uploadFile } = useFileUpload<UploadResponse>((file: File) => {
-    return uploadProjectImage(file);
-  }, {
-    maxSizeInMB: 5,
-    allowedTypes: ['image/jpeg', 'image/png', 'image/gif'],
-    onUploadSuccess: (result) => {
-      if (result.success && result.imagePath) {
-        setFormData(prev => ({
-          ...prev,
-          image_url: result.imagePath
-        }));
-      }
+  const { handleFileSelect: uploadFile } = useFileUpload<UploadResponse>(
+    async (file: File) => {
+      const response = await uploadProjectImage(file);
+      return {
+        success: response.success,
+        imagePath: response.imagePath || null
+      };
     }
-  });
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isTypesModalOpen, setIsTypesModalOpen] = useState(false);
+  const [projectTypes, setProjectTypes] = useState<ProjectType[]>([]);
+  const [editingTypeId, setEditingTypeId] = useState<number | null>(null);
+  const [typeFormData, setTypeFormData] = useState<ProjectTypeFormData>({
+    type: '',
+    fr_type: null
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -54,8 +107,11 @@ const ProjectsPage: React.FC = () => {
     })
   );
 
+  const { t } = useTranslation();
+
   useEffect(() => {
     fetchProjects();
+    fetchProjectTypes();
   }, []);
 
   const fetchProjects = async () => {
@@ -67,76 +123,160 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
+  const fetchProjectTypes = async () => {
+    try {
+      const data = await getProjectTypes();
+      setProjectTypes(data);
+    } catch (error) {
+      console.error('Error fetching project types:', error);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over || active.id === over.id) return;
     
-    const oldIndex = projects.findIndex(p => p.project_id === active.id);
-    const newIndex = projects.findIndex(p => p.project_id === over.id);
-    
-    // Create a new array with the items reordered
-    const reorderedProjects = arrayMove(projects, oldIndex, newIndex);
-    
-    // Update the display_order values
-    const updatedProjects = reorderedProjects.map((project: Project, index: number) => ({
-      ...project,
-      display_order: index + 1
-    }));
-    
-    // Update UI immediately
-    setProjects(updatedProjects);
-    
-    // Prepare data for batch update
-    const projectOrders = updatedProjects.map((project: Project) => ({
-      project_id: project.project_id,
-      display_order: project.display_order
-    }));
-    
     try {
+      console.log('Drag ended:', { active, over });
+      
+      // Get the current order of all projects
+      const oldIndex = projects.findIndex(p => p.project_id === active.id);
+      const newIndex = projects.findIndex(p => p.project_id === over.id);
+      console.log('Indexes:', { oldIndex, newIndex });
+      
+      // Create a new array with the items reordered
+      const reorderedProjects = arrayMove(projects, oldIndex, newIndex);
+      console.log('Reordered projects:', reorderedProjects);
+      
+      // Update the display_order values
+      const updatedProjects = reorderedProjects.map((project, index) => ({
+        ...project,
+        display_order: index + 1
+      }));
+      console.log('Updated projects with new order:', updatedProjects);
+      
+      // Update UI immediately
+      setProjects(updatedProjects);
+      
+      // Prepare data for batch update - only send project_id and display_order
+      const projectOrders = updatedProjects.map(project => ({
+        project_id: project.project_id,
+        display_order: project.display_order
+      }));
+      console.log('Sending project orders to server:', projectOrders);
+      
+      // Update the order in the database
       const result = await updateProjectOrders(projectOrders);
-      if (!result.success) {
-        // Refresh the data to ensure we're in sync with the server
-        const refreshedData = await getProjects();
-        const sortedProjects = [...refreshedData].sort((a, b) => a.display_order - b.display_order);
-        setProjects(sortedProjects);
+      
+      if (result.success) {
+        toast.success('Project order updated successfully');
+      } else {
+        const errorMessage = result.error || 'Failed to update project order';
+        console.error('Failed to update project order:', errorMessage);
+        toast.error(errorMessage);
+        // Refresh projects to ensure we're in sync with the server
+        await fetchProjects();
       }
     } catch (error) {
       console.error('Error updating project orders:', error);
-      // Refresh the data to ensure we're in sync with the server
-      const refreshedData = await getProjects();
-      const sortedProjects = [...refreshedData].sort((a, b) => a.display_order - b.display_order);
-      setProjects(sortedProjects);
+      // Check if it's an authentication error
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 403) {
+        toast.error('Your session may have expired. Please refresh the page and try again.');
+        return;
+      }
+      // Handle other errors
+      toast.error('Failed to update project order. Please try again.');
+      // Refresh projects to ensure we're in sync with the server
+      await fetchProjects();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value || null
+    }));
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      const response = await uploadProjectImage(file);
+      if (response.success && response.imagePath) {
+        setFormData(prev => ({
+          ...prev,
+          image_url: response.imagePath || null
+        }));
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
     }
   };
 
   const handleCreateProject = async () => {
     try {
-      const result = await createProject(formData);
+      // Validate required fields
+      if (!formData.title?.trim()) {
+        toast.error('Project title is required');
+        return;
+      }
+      if (!formData.type_id || formData.type_id === -1) {
+        toast.error('Please select a project type');
+        return;
+      }
+      if (!formData.status) {
+        toast.error('Project status is required');
+        return;
+      }
+
+      // Set the display_order to be the last position
+      const lastOrder = Math.max(...projects.map(p => p.display_order), 0);
+      const projectData = {
+        title: formData.title.trim(),
+        fr_title: formData.fr_title?.trim() || null,
+        description: formData.description.trim(),
+        fr_description: formData.fr_description?.trim() || null,
+        image_url: formData.image_url || null,
+        display_order: lastOrder + 1,
+        type_id: formData.type_id,
+        status: formData.status,
+        git_url: formData.git_url?.trim() || null,
+        demo_url: formData.demo_url?.trim() || null
+      };
+
+      const result = await createProject(projectData);
       if (!result.success) {
         throw new Error('Failed to create project');
       }
+
+      // Refresh the projects list from the server
+      const updatedProjects = await getProjects();
+      // Sort projects by display_order
+      const sortedProjects = [...updatedProjects].sort((a, b) => a.display_order - b.display_order);
+      setProjects(sortedProjects);
       
-      // Update local state
-      setProjects(prevProjects => [...prevProjects, { ...formData, project_id: result.id! }]);
-      setEditingProjectId(null);
+      // Reset form and close modal
       setFormData({
-        project_id: 0,
         title: '',
-        fr_title: '',
+        fr_title: null,
         description: '',
-        fr_description: '',
-        type: '',
-        type_fr: '',
-        git_url: '',
-        demo_url: '',
-        image_url: '',
+        fr_description: null,
+        image_url: null,
         display_order: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        type_id: -1,
+        status: 'pending-approval',
+        git_url: null,
+        demo_url: null
       });
+      setIsAddProjectModalOpen(false);
+      
+      // Show success message
+      toast.success('Project created successfully');
     } catch (error) {
       console.error('Error creating project:', error);
+      toast.error('Failed to create project');
     }
   };
 
@@ -161,9 +301,9 @@ const ProjectsPage: React.FC = () => {
       ...project,
       fr_title: project.fr_title || '',
       fr_description: project.fr_description || '',
-      type_fr: project.type_fr || '',
       git_url: project.git_url || '',
-      demo_url: project.demo_url || ''
+      demo_url: project.demo_url || '',
+      type_id: project.type_id
     });
     setEditingProjectId(project.project_id);
   };
@@ -171,33 +311,35 @@ const ProjectsPage: React.FC = () => {
   const handleCancelEdit = () => {
     setEditingProjectId(null);
     setFormData({
-      project_id: 0,
       title: '',
-      fr_title: '',
+      fr_title: null,
       description: '',
-      fr_description: '',
-      image_url: '',
+      fr_description: null,
+      image_url: null,
       display_order: 0,
-      created_at: '',
-      updated_at: '',
-      type: '',
-      type_fr: '',
-      git_url: '',
-      demo_url: ''
+      type_id: -1,
+      status: 'pending-approval',
+      git_url: null,
+      demo_url: null
     });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleUpdateProject = async (id: number) => {
     try {
-      const result = await updateProject(id, formData);
+      const projectData = {
+        title: formData.title,
+        fr_title: formData.fr_title,
+        description: formData.description,
+        fr_description: formData.fr_description,
+        image_url: formData.image_url,
+        display_order: formData.display_order,
+        type_id: formData.type_id,
+        status: formData.status,
+        git_url: formData.git_url,
+        demo_url: formData.demo_url
+      };
+
+      const result = await updateProject(id, projectData);
       if (!result.success) {
         throw new Error('Failed to update project');
       }
@@ -205,43 +347,86 @@ const ProjectsPage: React.FC = () => {
       // Update local state
       setProjects(prevProjects => 
         prevProjects.map(project => 
-          project.project_id === id ? { ...project, ...formData } : project
+          project.project_id === id 
+            ? { ...project, ...projectData }
+            : project
         )
       );
       
+      toast.success('Project updated successfully');
       setEditingProjectId(null);
-      setFormData({
-        project_id: 0,
-        title: '',
-        fr_title: '',
-        description: '',
-        fr_description: '',
-        type: '',
-        type_fr: '',
-        git_url: '',
-        demo_url: '',
-        image_url: '',
-        display_order: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
     } catch (error) {
       console.error('Error updating project:', error);
+      toast.error('Failed to update project');
     }
   };
 
-  const handleImageUpload = async (id: number, file: File) => {
+  const handleTypeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTypeFormData(prev => ({
+      ...prev,
+      [name]: value || null
+    }));
+  };
+
+  const handleCreateType = async () => {
     try {
-      const result = await uploadProjectImage(file);
-      if (result.success && result.imagePath) {
-        setFormData(prev => ({
-          ...prev,
-          image_url: result.imagePath
-        }));
+      const result = await createProjectType(typeFormData);
+      if (!result.success) {
+        throw new Error('Failed to create project type');
       }
+      
+      // Refresh project types
+      await fetchProjectTypes();
+      setTypeFormData({ type: '', fr_type: null });
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error creating project type:', error);
     }
+  };
+
+  const handleUpdateType = async (id: number) => {
+    try {
+      const result = await updateProjectType(id, typeFormData);
+      if (!result.success) {
+        throw new Error('Failed to update project type');
+      }
+      
+      // Refresh project types
+      await fetchProjectTypes();
+      setEditingTypeId(null);
+      setTypeFormData({ type: '', fr_type: null });
+    } catch (error) {
+      console.error('Error updating project type:', error);
+    }
+  };
+
+  const handleDeleteType = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this project type?')) return;
+    
+    try {
+      const result = await deleteProjectType(id);
+      if (!result.success) {
+        throw new Error('Failed to delete project type');
+      }
+      
+      // Refresh project types
+      await fetchProjectTypes();
+    } catch (error) {
+      console.error('Error deleting project type:', error);
+    }
+  };
+
+  const handleEditType = (type: ProjectType) => {
+    setEditingTypeId(type.type_id);
+    setTypeFormData({
+      type: type.type,
+      fr_type: type.fr_type
+    });
+  };
+
+  // Use type assertions for translations
+  const translateStatus = (t: TFunction, key: string, defaultValue: string): string => {
+    return t(key as any, defaultValue);
   };
 
   if (!isAdmin) {
@@ -269,15 +454,64 @@ const ProjectsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <p className="mt-1 text-gray-600">Manage the projects that appear on the portfolio</p>
         </div>
-        <button
-          onClick={handleCreateProject}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add Project
-        </button>
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setIsTypesModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Manage Types
+          </button>
+          <button
+            onClick={() => {
+              if (projectTypes.length === 0) {
+                alert('Please create at least one project type before adding a project.');
+                setIsTypesModalOpen(true);
+                return;
+              }
+              // Add a temporary project to the list in edit mode
+              const newProject: Project = {
+                project_id: -Date.now(), // Temporary negative ID
+                title: '',
+                fr_title: null,
+                description: '',
+                fr_description: null,
+                image_url: null,
+                display_order: 1, // Initially at top for editing
+                type_id: projectTypes[0]?.type_id || -1,
+                status: 'pending-approval',
+                git_url: null,
+                demo_url: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              
+              // Add new project at the beginning for editing
+              setProjects([newProject, ...projects]);
+              setFormData({
+                title: '',
+                fr_title: null,
+                description: '',
+                fr_description: null,
+                image_url: null,
+                display_order: 1,
+                type_id: projectTypes[0]?.type_id || -1,
+                status: 'pending-approval',
+                git_url: null,
+                demo_url: null
+              });
+              setEditingProjectId(newProject.project_id);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add Project
+          </button>
+        </div>
       </div>
 
       <DndContext
@@ -297,33 +531,129 @@ const ProjectsPage: React.FC = () => {
                 isEditing={editingProjectId === project.project_id}
                 isAdmin={isAdmin}
                 onEdit={() => handleEditSection(project)}
-                onCancelEdit={handleCancelEdit}
-                onUpdate={handleUpdateProject}
+                onCancelEdit={() => {
+                  if (project.project_id < 0) {
+                    // Remove temporary project if cancelled
+                    setProjects(projects.filter(p => p.project_id !== project.project_id));
+                  }
+                  handleCancelEdit();
+                }}
+                onUpdate={async (id) => {
+                  if (id < 0) {
+                    // This is a new project
+                    await handleCreateProject();
+                  } else {
+                    // This is an existing project
+                    await handleUpdateProject(id);
+                  }
+                }}
                 onDelete={handleDeleteProject}
                 onImageUpload={handleImageUpload}
                 formData={formData}
                 onInputChange={handleInputChange}
+                projectTypes={projectTypes}
+                translateStatus={translateStatus}
               />
             ))}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Project Types Modal */}
+      <Modal isOpen={isTypesModalOpen} onClose={() => {
+        setIsTypesModalOpen(false);
+        setEditingTypeId(null);
+        setTypeFormData({ type: '', fr_type: null });
+      }}>
+        <div className="bg-white p-8 rounded-lg max-w-2xl w-full mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900">Manage Project Types</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type (English)</label>
+                <input
+                  type="text"
+                  id="type"
+                  name="type"
+                  value={typeFormData.type}
+                  onChange={handleTypeInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="e.g. Web Development"
+                />
+              </div>
+              <div>
+                <label htmlFor="fr_type" className="block text-sm font-medium text-gray-700">Type (French)</label>
+                <input
+                  type="text"
+                  id="fr_type"
+                  name="fr_type"
+                  value={typeFormData.fr_type || ''}
+                  onChange={handleTypeInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="e.g. Développement Web"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setIsTypesModalOpen(false);
+                  setEditingTypeId(null);
+                  setTypeFormData({ type: '', fr_type: null });
+                }}
+                className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => editingTypeId ? handleUpdateType(editingTypeId) : handleCreateType()}
+                className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                {editingTypeId ? 'Update Type' : 'Add Type'}
+              </button>
+            </div>
+
+            <div className="mt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Existing Types</h3>
+              <div className="space-y-4">
+                {projectTypes.map((type) => (
+                  <div key={type.type_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{type.type}</p>
+                      <p className="text-sm text-gray-500">{type.fr_type || 'No French translation'}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditType(type)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteType(type.type_id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
-
-interface SortableProjectItemProps {
-  project: Project;
-  isEditing: boolean;
-  isAdmin: boolean;
-  onEdit: () => void;
-  onCancelEdit: () => void;
-  onUpdate: (id: number) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-  onImageUpload: (id: number, file: File) => Promise<void>;
-  formData: Project;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => void;
-}
 
 const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   project,
@@ -335,8 +665,11 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   onDelete,
   onImageUpload,
   formData,
-  onInputChange
+  onInputChange,
+  projectTypes,
+  translateStatus
 }) => {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -353,7 +686,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await onImageUpload(project.project_id, file);
+      await onImageUpload(file);
     }
   };
 
@@ -468,38 +801,21 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor={`type-${project.project_id}`} className="block text-sm font-medium text-gray-700">Project Type (English)</label>
-              <input
-                type="text"
+              <label htmlFor={`type-${project.project_id}`} className="block text-sm font-medium text-gray-700">Project Type</label>
+              <select
                 id={`type-${project.project_id}`}
-                name="type"
-                value={formData.type}
+                name="type_id"
+                value={formData.type_id}
                 onChange={onInputChange}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center">
-                <label htmlFor={`type_fr-${project.project_id}`} className="block text-sm font-medium text-gray-700">Project Type (French)</label>
-                <button
-                  type="button"
-                  onClick={() => onInputChange({ target: { name: 'type_fr', value: 'Translating...' } })}
-                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
-                >
-                  Translate
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              <input
-                type="text"
-                id={`type_fr-${project.project_id}`}
-                name="type_fr"
-                value={formData.type_fr || ''}
-                onChange={onInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
+              >
+                <option value="">Select a type</option>
+                {projectTypes.map((type) => (
+                  <option key={type.type_id} value={type.type_id}>
+                    {type.type} {type.fr_type ? `/ ${type.fr_type}` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -528,6 +844,25 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
             </div>
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              {translateStatus(t, 'projects:status.label', 'Status')}
+            </label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={onInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="pending-approval">{translateStatus(t, 'projects:status.pending-approval', 'Pending Approval')}</option>
+              <option value="planned">{translateStatus(t, 'projects:status.planned', 'Planned')}</option>
+              <option value="in-progress">{translateStatus(t, 'projects:status.in-progress', 'In Progress')}</option>
+              <option value="under-review">{translateStatus(t, 'projects:status.under-review', 'Under Review')}</option>
+              <option value="testing">{translateStatus(t, 'projects:status.testing', 'Testing')}</option>
+              <option value="completed">{translateStatus(t, 'projects:status.completed', 'Completed')}</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700">Project Image</label>
             <div 
@@ -536,12 +871,12 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              onDrop={(e) => {
+              onDrop={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const file = e.dataTransfer.files?.[0];
                 if (file) {
-                  onImageUpload(project.project_id, file);
+                  await onImageUpload(file);
                 }
               }}
             >
@@ -565,7 +900,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                       <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     <div className="flex text-sm text-gray-600">
-                      <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                      <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-ring-indigo-500">
                         <span>Upload a file</span>
                         <input
                           type="file"
@@ -605,12 +940,12 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
           <div>
             <h3 className="text-lg font-medium text-gray-900">{project.title}</h3>
             <p className="mt-2 text-gray-600">{project.description}</p>
-            <p className="mt-2 text-sm text-gray-500">Type: {project.type}</p>
+            <p className="mt-2 text-sm text-gray-500">Type: {projectTypes.find(pt => pt.type_id === project.type_id)?.type}</p>
           </div>
           <div>
             <h3 className="text-lg font-medium text-gray-900">{project.fr_title || project.title}</h3>
             <p className="mt-2 text-gray-600">{project.fr_description || project.description}</p>
-            <p className="mt-2 text-sm text-gray-500">Type: {project.type_fr || project.type}</p>
+            <p className="mt-2 text-sm text-gray-500">Type: {projectTypes.find(pt => pt.type_id === project.type_id)?.fr_type || projectTypes.find(pt => pt.type_id === project.type_id)?.type}</p>
           </div>
           {project.image_url && (
             <div className="col-span-2 mt-4">
@@ -644,6 +979,10 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 Demo
               </a>
             )}
+          </div>
+          <div className="col-span-2 mt-4 flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-500">{translateStatus(t, 'projects:status.label', 'Status')}:</span>
+            <span className="ml-2 text-sm text-gray-900">{translateStatus(t, `projects:status.${project.status}`, project.status)}</span>
           </div>
         </div>
       )}

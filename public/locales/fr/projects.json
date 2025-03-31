@@ -7,8 +7,12 @@
     "mobile": "Mobile"
   },
   "status": {
-    "completed": "Terminé",
-    "in-progress": "En cours"
+    "pending-approval": "En attente d'approbation",
+    "planned": "Planifié",
+    "in-progress": "En cours",
+    "under-review": "En révision",
+    "testing": "En test",
+    "completed": "Terminé"
   },
   "actions": {
     "viewOnGitHub": "Voir sur GitHub",

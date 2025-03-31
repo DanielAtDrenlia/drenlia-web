@@ -554,21 +554,37 @@ const teamFunctions = {
 // Project-related functions
 const projectFunctions = {
   /**
-   * Get all projects
-   * @returns {Array} Array of project objects
+   * Get all projects with their associated project types
+   * @returns {Array} Array of project objects with project type information
    */
   getAllProjects() {
-    const stmt = getDb().prepare('SELECT * FROM projects ORDER BY display_order');
+    const stmt = getDb().prepare(`
+      SELECT 
+        p.*,
+        pt.type,
+        pt.fr_type
+      FROM projects p
+      LEFT JOIN project_types pt ON p.type_id = pt.type_id
+      ORDER BY p.display_order
+    `);
     return stmt.all();
   },
 
   /**
-   * Get a project by ID
+   * Get a project by ID with its associated project type
    * @param {number} id - The project ID
    * @returns {Object|null} The project object or null if not found
    */
   getProjectById(id) {
-    const stmt = getDb().prepare('SELECT * FROM projects WHERE project_id = ?');
+    const stmt = getDb().prepare(`
+      SELECT 
+        p.*,
+        pt.type,
+        pt.fr_type
+      FROM projects p
+      LEFT JOIN project_types pt ON p.type_id = pt.type_id
+      WHERE p.project_id = ?
+    `);
     return stmt.get(id) || null;
   },
 
@@ -576,7 +592,7 @@ const projectFunctions = {
    * Update a project
    * @param {number} id - The project ID
    * @param {Object} data - The project data
-   * @returns {boolean} True if successful
+   * @returns {Object} Response object with success status
    */
   updateProject(id, data) {
     const {
@@ -586,8 +602,8 @@ const projectFunctions = {
       image_url,
       fr_title,
       fr_description,
-      type,
-      type_fr,
+      type_id,
+      status,
       git_url,
       demo_url
     } = data;
@@ -600,8 +616,8 @@ const projectFunctions = {
           image_url = ?,
           fr_title = ?,
           fr_description = ?,
-          type = ?,
-          type_fr = ?,
+          type_id = ?,
+          status = ?,
           git_url = ?,
           demo_url = ?,
           updated_at = CURRENT_TIMESTAMP
@@ -615,14 +631,14 @@ const projectFunctions = {
       image_url,
       fr_title,
       fr_description,
-      type,
-      type_fr,
+      type_id,
+      status,
       git_url,
       demo_url,
       id
     );
 
-    return info.changes > 0;
+    return { success: info.changes > 0 };
   },
 
   /**
@@ -638,8 +654,8 @@ const projectFunctions = {
       image_url,
       fr_title,
       fr_description,
-      type,
-      type_fr,
+      type_id,
+      status,
       git_url,
       demo_url
     } = data;
@@ -652,8 +668,8 @@ const projectFunctions = {
         image_url,
         fr_title,
         fr_description,
-        type,
-        type_fr,
+        type_id,
+        status,
         git_url,
         demo_url,
         created_at,
@@ -668,8 +684,8 @@ const projectFunctions = {
       image_url,
       fr_title,
       fr_description,
-      type,
-      type_fr,
+      type_id,
+      status,
       git_url,
       demo_url
     );
@@ -694,24 +710,120 @@ const projectFunctions = {
   /**
    * Update project display orders
    * @param {Array} projects - Array of project objects with new display orders
-   * @returns {boolean} True if successful
+   * @returns {Object} Response object with success status
    */
   updateProjectOrders(projects) {
+    console.log('Starting database update for projects:', JSON.stringify(projects, null, 2));
     const db = getDb();
     const stmt = db.prepare('UPDATE projects SET display_order = ? WHERE project_id = ?');
     
-    const updateOrder = db.transaction((projects) => {
-      for (const project of projects) {
-        stmt.run(project.display_order, project.project_id);
-      }
-    });
+    // Log all project IDs in the database
+    const allProjects = db.prepare('SELECT project_id FROM projects').all();
+    console.log('All project IDs in database:', JSON.stringify(allProjects.map(p => p.project_id), null, 2));
     
-    updateOrder(projects);
-    return true;
+    try {
+      const updateOrder = db.transaction((projectList) => {
+        for (const project of projectList) {
+          if (!project.project_id || typeof project.display_order !== 'number') {
+            console.log('Invalid project data:', JSON.stringify(project, null, 2));
+            throw new Error('Invalid project data: missing project_id or display_order');
+          }
+          console.log(`Attempting to update project ${project.project_id} to order ${project.display_order}`);
+          const info = stmt.run(project.display_order, project.project_id);
+          console.log(`Update result for project ${project.project_id}:`, JSON.stringify(info, null, 2));
+          if (info.changes === 0) {
+            console.log(`No rows affected for project ${project.project_id}`);
+            throw new Error(`Project not found with ID: ${project.project_id}`);
+          }
+        }
+      });
+      
+      updateOrder(projects);
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating project orders:', error);
+      return { success: false, message: error.message };
+    }
   }
 };
 
-// Export the database functions
+// Project Types functions
+const projectTypeFunctions = {
+  /**
+   * Get all project types
+   * @returns {Array} Array of project type objects
+   */
+  getAllProjectTypes() {
+    const stmt = getDb().prepare('SELECT * FROM project_types ORDER BY type');
+    return stmt.all();
+  },
+
+  /**
+   * Get a project type by ID
+   * @param {number} id - The project type ID
+   * @returns {Object|null} The project type object or null if not found
+   */
+  getProjectTypeById(id) {
+    const stmt = getDb().prepare('SELECT * FROM project_types WHERE type_id = ?');
+    return stmt.get(id) || null;
+  },
+
+  /**
+   * Create a new project type
+   * @param {Object} data - The project type data
+   * @returns {Object} The created project type object
+   */
+  createProjectType(data) {
+    const { type, fr_type } = data;
+
+    const stmt = getDb().prepare(`
+      INSERT INTO project_types (type, fr_type, created_at, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+
+    const info = stmt.run(type, fr_type);
+
+    return {
+      id: info.lastInsertRowid,
+      success: true
+    };
+  },
+
+  /**
+   * Update a project type
+   * @param {number} id - The project type ID
+   * @param {Object} data - The project type data
+   * @returns {boolean} True if successful
+   */
+  updateProjectType(id, data) {
+    const { type, fr_type } = data;
+
+    const stmt = getDb().prepare(`
+      UPDATE project_types 
+      SET type = ?,
+          fr_type = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE type_id = ?
+    `);
+
+    const info = stmt.run(type, fr_type, id);
+
+    return info.changes > 0;
+  },
+
+  /**
+   * Delete a project type
+   * @param {number} id - The project type ID
+   * @returns {boolean} True if successful
+   */
+  deleteProjectType(id) {
+    const stmt = getDb().prepare('DELETE FROM project_types WHERE type_id = ?');
+    const info = stmt.run(id);
+    return info.changes > 0;
+  }
+};
+
+// Export all database functions
 module.exports = {
   getDb,
   closeDb,
@@ -719,5 +831,6 @@ module.exports = {
   settings: settingsFunctions,
   about: aboutFunctions,
   team: teamFunctions,
-  project: projectFunctions
+  project: projectFunctions,
+  projectTypes: projectTypeFunctions,
 }; 

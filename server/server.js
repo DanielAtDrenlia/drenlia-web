@@ -335,84 +335,60 @@ app.get('/api/auth/status', (req, res) => {
   }
 });
 
-// Move the local login endpoint here, before other routes
+// Auth endpoints
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
+    
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and password are required' 
       });
     }
 
-    // Get user by email
     const user = db.users.getUserByEmail(email);
-    
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
       });
     }
 
-    // Check if user has a password (is a local account)
-    if (!user.password_hash) {
-      return res.status(401).json({
-        success: false,
-        message: 'This account uses Google authentication'
-      });
-    }
-
-    // Verify password
     const isValid = await bcrypt.compare(password, user.password_hash);
-    
     if (!isValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
       });
     }
 
-    // Set user in session using Passport
+    // Log the user in
     req.login(user, (err) => {
       if (err) {
         console.error('Error logging in user:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Error during login'
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Error logging in' 
         });
       }
-
-      // Save session before sending response
-      req.session.save((err) => {
-        if (err) {
-          console.error('Error saving session:', err);
-          return res.status(500).json({
-            success: false,
-            message: 'Error during login'
-          });
+      
+      res.json({ 
+        success: true,
+        user: {
+          id: user.user_id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          admin: !!user.admin
         }
-
-        res.json({
-          success: true,
-          user: {
-            id: user.user_id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            isAdmin: !!user.admin
-          }
-        });
       });
     });
-
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error during login'
+    console.error('Error in login endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error' 
     });
   }
 });
@@ -583,14 +559,14 @@ app.post('/api/admin/about', auth.isAdmin, (req, res) => {
   try {
     const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
-    if (!title || !description) {
-      return res.status(400).json({ success: false, message: 'Title and description are required' });
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Title is required' });
     }
     
     const id = db.about.createSection({
       title,
       fr_title: fr_title || null,
-      description,
+      description: description || '',
       fr_description: fr_description || null,
       image_url: image_url || null,
       display_order: display_order || 0
@@ -1531,7 +1507,7 @@ app.post('/api/admin/setup/stop', auth.isAdmin, (req, res) => {
         }
         
         res.json({ 
-          success: true, 
+          success: true,
           message: 'Setup service stopped and disabled successfully',
           output: 'Setup service stopped and disabled'
         });
@@ -1673,10 +1649,34 @@ app.get('/api/projects/:id', async (req, res) => {
   }
 });
 
+app.put('/api/admin/projects/reorder', auth.isAdmin, (req, res) => {
+  console.log('Received project reorder request');
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
+  const { projects } = req.body;
+  console.log('Extracted projects array:', JSON.stringify(projects, null, 2));
+  
+  if (!Array.isArray(projects)) {
+    console.log('Invalid request: projects is not an array');
+    return res.status(400).json({ error: 'Invalid request: projects must be an array' });
+  }
+
+  const result = db.project.updateProjectOrders(projects);
+  console.log('Database update result:', JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: result.message });
+  }
+});
+
 // Admin project endpoints
 app.post('/api/admin/projects', auth.isAdmin, async (req, res) => {
   try {
-    const result = await db.project.createProject(req.body);
+    const project = req.body;
+    const result = await db.project.createProject(project);
     res.json(result);
   } catch (error) {
     console.error('Error creating project:', error);
@@ -1684,43 +1684,23 @@ app.post('/api/admin/projects', auth.isAdmin, async (req, res) => {
   }
 });
 
-app.put('/api/admin/projects/reorder', auth.isAdmin, (req, res) => {
-  try {
-    const { projects } = req.body;
-    
-    if (!Array.isArray(projects) || projects.length === 0) {
-      return res.status(400).json({ success: false, message: 'Projects array is required' });
-    }
-    
-    const success = db.project.updateProjectOrders(projects);
-    if (success) {
-      res.json({ success: true });
-    } else {
-      res.status(500).json({ success: false, message: 'Failed to update project orders' });
-    }
-  } catch (error) {
-    console.error('Error updating project orders:', error);
-    res.status(500).json({ success: false, message: 'Error updating project orders' });
-  }
-});
-
 app.put('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
   try {
-    const success = await db.project.updateProject(req.params.id, req.body);
-    if (!success) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
+    const id = parseInt(req.params.id);
+    const result = await db.project.updateProject(id, req.body);
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
     }
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating project:', error);
-    res.status(500).json({ error: 'Failed to update project' });
+    res.status(500).json({ success: false, message: 'Failed to update project' });
   }
 });
 
 app.delete('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
   try {
-    const success = await db.project.deleteProject(req.params.id);
+    const success = await db.project.deleteProject(parseInt(req.params.id));
     if (!success) {
       res.status(404).json({ error: 'Project not found' });
       return;
@@ -1749,6 +1729,77 @@ app.post('/api/admin/upload/project-image', auth.isAdmin, upload.single('image')
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ success: false, message: 'Error uploading file' });
+  }
+});
+
+// Project Types endpoints
+app.get('/api/project-types', async (req, res) => {
+  try {
+    const projectTypes = await db.projectTypes.getAllProjectTypes();
+    res.json(projectTypes);
+  } catch (error) {
+    console.error('Error fetching project types:', error);
+    res.status(500).json({ error: 'Failed to fetch project types' });
+  }
+});
+
+app.post('/api/admin/project-types', auth.isAdmin, async (req, res) => {
+  try {
+    const { type, fr_type } = req.body;
+    
+    if (!type) {
+      res.status(400).json({ error: 'Type is required' });
+      return;
+    }
+
+    const result = await db.projectTypes.createProjectType({ type, fr_type });
+    res.json({
+      id: result.id,
+      success: true
+    });
+  } catch (error) {
+    console.error('Error creating project type:', error);
+    res.status(500).json({ error: 'Failed to create project type' });
+  }
+});
+
+app.put('/api/admin/project-types/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, fr_type } = req.body;
+
+    if (!type) {
+      res.status(400).json({ error: 'Type is required' });
+      return;
+    }
+
+    const success = await db.projectTypes.updateProjectType(id, { type, fr_type });
+    if (!success) {
+      res.status(404).json({ error: 'Project type not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating project type:', error);
+    res.status(500).json({ error: 'Failed to update project type' });
+  }
+});
+
+app.delete('/api/admin/project-types/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await db.projectTypes.deleteProjectType(id);
+    
+    if (!success) {
+      res.status(404).json({ error: 'Project type not found' });
+      return;
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project type:', error);
+    res.status(500).json({ error: 'Failed to delete project type' });
   }
 });
 
