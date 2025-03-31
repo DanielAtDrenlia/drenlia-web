@@ -99,38 +99,3 @@ This page showcases the various screens and features of the application.
   <br>
   <strong>Site Settings Configuration</strong>
 </div>
-
-# Screenshots Gallery
-
-## Homepage
-![Homepage](images/website-homepage.png)
-
-## About Page
-![About Page](images/website-about.png)
-
-## Team Page
-![Team Page](images/website-team.png)
-
-## Admin Dashboard
-![Admin Dashboard](images/website-admin.png)
-
-## Admin Team Management
-![Admin Team Management](images/website-admin-team.png)
-
-## Admin About Management
-![Admin About Management](images/website-admin-about.png)
-
-## Admin Settings
-![Admin Settings](images/website-admin-settings.png)
-
-## Admin User Management
-![Admin User Management](images/website-admin-users.png)
-
-## Admin Site Content
-![Admin Site Content](images/website-admin-content.png)
-
-## Admin Visual Assets
-![Admin Visual Assets](images/website-admin-assets.png)
-
-## Admin Setup
-![Admin Setup](images/website-admin-setup.png) 
