@@ -21,8 +21,8 @@ interface BackendEnvSetupProps {
 const defaultEnvValues = {
   // Server Configuration
   PORT: '3011',
-  FRONTEND_URL: 'http://dev.drenlia.com',
-  ALLOWED_ORIGINS: 'https://drenlia.com,https://dev.drenlia.com,http://localhost:3010',
+  FRONTEND_URL: 'http://localhost:3010',
+  ALLOWED_ORIGINS: 'http://localhost:3010',
   
   // Email Configuration
   EMAIL_HOST: 'smtp.gmail.com',

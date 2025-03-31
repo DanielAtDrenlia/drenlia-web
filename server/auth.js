@@ -11,9 +11,7 @@ const db = require('./db');
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.NODE_ENV === 'production' 
-      ? 'https://dev.drenlia.com/api/auth/google/callback'
-      : '/api/auth/google/callback',
+    callbackURL: `${process.env.FRONTEND_URL}/api/auth/google/callback`,
     // This is critical - it ensures the callback URL is constructed with the correct host
     proxy: true
   },
