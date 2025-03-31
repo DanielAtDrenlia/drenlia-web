@@ -2,34 +2,29 @@
   "title": "Our Services",
   "subtitle": "Discover how we can help transform your business with our comprehensive range of services.",
   "categories": {
-    "dev": {
-      "title": "Dev Services",
-      "description": "We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices."
+    "service1": {
+      "title": "Customer Service",
+      "description": "We help businesses enhance their customer interactions through comprehensive support solutions and satisfaction improvement strategies."
     },
-    "consulting": {
-      "title": "IT Consulting",
-      "description": "Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals."
+    "service2": {
+      "title": "Training & Education",
+      "description": "Our expert consultants provide tailored training programs and educational solutions to develop your team's skills and knowledge."
     },
-    "migration": {
-      "title": "Infrastructure Migration",
-      "description": "We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process."
+    "service3": {
+      "title": "Marketing & Branding",
+      "description": "We help you build a strong brand identity and develop effective marketing strategies to increase your market visibility."
     },
-    "monitoring": {
-      "title": "Monitoring",
-      "description": "Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business."
+    "service4": {
+      "title": "Financial Planning",
+      "description": "Our comprehensive financial planning services help you manage resources effectively and develop sound financial strategies."
     },
-    "devops": {
-      "title": "DevOps/SysOps",
-      "description": "We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability."
+    "service5": {
+      "title": "Operations Management",
+      "description": "We implement efficient operational processes to streamline your daily activities and improve overall business efficiency."
     },
-    "linux": {
-      "title": "Linux Admin",
-      "description": "With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely."
+    "service6": {
+      "title": "Strategic Planning",
+      "description": "With our strategic planning expertise, we help organizations set clear goals and develop effective paths to achieve them."
     }
-  },
-  "cta": {
-    "title": "Ready to Get Started?",
-    "description": "Contact us today to discuss your project.",
-    "button": "Contact Us"
   }
 } 

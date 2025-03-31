@@ -6,6 +6,15 @@ import type { i18n } from 'i18next';
 import { usePreserveScroll } from '../hooks/usePreserveScroll';
 import CallToAction from '../components/CallToAction';
 import Modal from '../components/Modal';
+import { getProjects, getProjectTypes, type Project, type ProjectType } from '../services/apiService';
+
+interface StyledProps {
+  isVisible: boolean;
+}
+
+interface FilterButtonProps {
+  active: boolean;
+}
 
 const ProjectsContainer = styled.div`
   max-width: 1200px;
@@ -30,7 +39,7 @@ const fadeInDown = keyframes`
   }
 `;
 
-const ProjectsTitle = styled.h1<{ isVisible: boolean }>`
+const ProjectsTitle = styled.h1<StyledProps>`
   font-size: 3rem;
   margin-bottom: 1.5rem;
   opacity: 0;
@@ -53,7 +62,7 @@ const fadeIn = keyframes`
   }
 `;
 
-const ProjectsSubtitle = styled.p<{ isVisible: boolean }>`
+const ProjectsSubtitle = styled.p<StyledProps>`
   font-size: 1.2rem;
   color: #666;
   max-width: 800px;
@@ -78,7 +87,7 @@ const slideIn = keyframes`
   }
 `;
 
-const FilterContainer = styled.div<{ isVisible: boolean }>`
+const FilterContainer = styled.div<StyledProps>`
   display: flex;
   justify-content: center;
   margin-bottom: 3rem;
@@ -92,7 +101,7 @@ const FilterContainer = styled.div<{ isVisible: boolean }>`
   `}
 `;
 
-const FilterButton = styled.button<{ active: boolean }>`
+const FilterButton = styled.button<FilterButtonProps>`
   padding: 0.5rem 1.5rem;
   border-radius: 30px;
   background-color: ${({ active }) => (active ? 'var(--accent-color)' : 'transparent')};
@@ -108,7 +117,7 @@ const FilterButton = styled.button<{ active: boolean }>`
   }
 `;
 
-const ProjectsGrid = styled.div<{ isVisible: boolean }>`
+const ProjectsGrid = styled.div<StyledProps>`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
@@ -188,6 +197,10 @@ const ProjectImage = styled.div`
   height: 250px;
   overflow: hidden;
   cursor: pointer;
+  background-color: #f5f5f5; // Light gray background for empty states
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   img {
     width: 100%;
@@ -319,15 +332,19 @@ const ProjectLink = styled.a`
 `;
 
 const ProjectsPage: React.FC = () => {
-  const { t: translate, i18n } = useTranslation('projects');
+  const { t, i18n } = useTranslation('projects');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectTypes, setProjectTypes] = useState<ProjectType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isCardsVisible, setIsCardsVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{ src: string; key: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   usePreserveScroll(i18n);
-  
+
   useEffect(() => {
     // Set visibility to true immediately on mount
     setIsVisible(true);
@@ -340,6 +357,31 @@ const ProjectsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch projects and project types data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [projectsData, typesData] = await Promise.all([
+          getProjects(),
+          getProjectTypes()
+        ]);
+        
+        // Sort projects by display_order
+        const sortedProjects = [...projectsData].sort((a, b) => a.display_order - b.display_order);
+        setProjects(sortedProjects);
+        setProjectTypes(typesData);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load projects. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Handle category changes without refreshing the page
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -350,79 +392,127 @@ const ProjectsPage: React.FC = () => {
     return () => clearTimeout(timer);
   };
 
-  const projects = [
-    {
-      id: 1,
-      key: 'kanban',
-      category: 'web',
-      status: 'completed' as const,
-      image: '/images/projects/kanban-app.png',
-      link: 'https://github.com/DanielAtDrenlia/easy-kanban',
-      demoLink: 'https://kanban.demo.drenlia.com/'
-    },
-    {
-      id: 2,
-      key: 'teamScheduler',
-      category: 'web',
-      status: 'completed' as const,
-      image: '/images/projects/calendar-app.png',
-      link: 'https://github.com/DanielAtDrenlia/teamcal',
-      demoLink: 'https://teamcal.demo.drenlia.com/'
-    },
-    {
-      id: 3,
-      key: 'secureMail',
-      category: 'web',
-      status: 'in-progress' as const,
-      image: '/images/projects/secure-mail.png',
-      link: '#'
-    },
-    {
-      id: 4,
-      key: 'clueCam',
-      category: 'mobile',
-      status: 'in-progress' as const,
-      image: '/images/projects/cluecam.png',
-      link: '#'
-    }
-  ];
-  
-  const filters = [
-    { id: 'all', label: translate('filters.all', 'All') },
-    { id: 'web', label: translate('filters.web', 'Web') },
-    { id: 'mobile', label: translate('filters.mobile', 'Mobile') }
-  ];
-  
+  // Helper function to get content based on current language
+  const getLocalizedContent = (project: Project, field: 'title' | 'description') => {
+    const isFrench = i18n.language === 'fr';
+    return isFrench ? project[`fr_${field}`] || project[field] : project[field];
+  };
+
+  // Helper function to get localized type name
+  const getLocalizedType = (typeId: number) => {
+    const projectType = projectTypes.find(t => t.type_id === typeId);
+    if (!projectType) return '';
+    return i18n.language === 'fr' ? projectType.fr_type || projectType.type : projectType.type;
+  };
+
   const filteredProjects = selectedCategory === 'all' 
     ? projects 
-    : projects.filter(project => project.category === selectedCategory);
+    : projects.filter(project => project.type_id === parseInt(selectedCategory));
     
-  const handleImageClick = (imageSrc: string, key: string) => {
-    setSelectedImage({ src: imageSrc, key });
+  const handleImageClick = (imageSrc: string, projectId: number) => {
+    setSelectedImage(imageSrc);
   };
   
   const closeModal = () => {
     setSelectedImage(null);
   };
+
+  // Helper function to render project image
+  const renderProjectImage = (project: Project) => {
+    if (!project.image_url) {
+      return (
+        <div style={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          color: '#666'
+        }}>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="48" 
+            height="48" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </div>
+      );
+    }
+
+    return (
+      <img 
+        src={project.image_url || ''} 
+        alt={getLocalizedContent(project, 'title') || ''}
+        onError={(e) => {
+          // Remove the error handler to prevent infinite loops
+          const target = e.target as HTMLImageElement;
+          target.onerror = null;
+          target.style.display = 'none';
+          target.parentElement?.querySelector('div')?.style.removeProperty('display');
+        }}
+      />
+    );
+  };
+
+  if (loading) {
+    return (
+      <ProjectsContainer>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      </ProjectsContainer>
+    );
+  }
+
+  if (error) {
+    return (
+      <ProjectsContainer>
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      </ProjectsContainer>
+    );
+  }
   
   return (
     <>
       <ProjectsContainer ref={containerRef}>
         <ProjectsHeader id="projects-header">
-          <ProjectsTitle isVisible={isVisible}>{translate('title', 'Our Projects') as string}</ProjectsTitle>
+          <ProjectsTitle isVisible={isVisible}>
+            {t('title', 'Our Projects')}
+          </ProjectsTitle>
           <ProjectsSubtitle isVisible={isVisible}>
-            {translate('subtitle', 'Discover our portfolio of successful digital solutions') as string}
+            {t('subtitle', 'Discover our portfolio of successful digital solutions')}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
         <FilterContainer isVisible={isVisible}>
-          {filters.map(filter => (
+          <FilterButton 
+            active={selectedCategory === 'all'}
+            onClick={() => handleCategoryChange('all')}
+          >
+            {t('filters.all', 'All')}
+          </FilterButton>
+          {projectTypes.map(type => (
             <FilterButton 
-              key={filter.id} 
-              active={selectedCategory === filter.id}
-              onClick={() => handleCategoryChange(filter.id)}
+              key={type.type_id} 
+              active={selectedCategory === type.type_id.toString()}
+              onClick={() => handleCategoryChange(type.type_id.toString())}
             >
-              {filter.label as string}
+              {getLocalizedType(type.type_id)}
             </FilterButton>
           ))}
         </FilterContainer>
@@ -432,43 +522,55 @@ const ProjectsPage: React.FC = () => {
             const position = getRandomPosition(index);
             return (
               <ProjectCard 
-                key={project.id} 
+                key={project.project_id} 
                 isVisible={isCardsVisible}
                 index={index}
                 x={position.x}
                 y={position.y}
                 rotate={position.rotate}
               >
-                <ProjectImage onClick={() => handleImageClick(project.image, project.key)}>
-                  <img src={project.image} alt={translate(`projects.${project.key}.title`, '') as string} />
+                <ProjectImage onClick={() => project.image_url && handleImageClick(project.image_url, project.project_id)}>
+                  {renderProjectImage(project)}
+                  <div style={{ display: 'none' }}>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="48" 
+                      height="48" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
                 </ProjectImage>
                 <ProjectContent>
-                  <ProjectCategory>{filters.find(f => f.id === project.category)?.label as string}</ProjectCategory>
-                  <ProjectTitle>{translate(`projects.${project.key}.title`, '') as string}</ProjectTitle>
+                  <ProjectCategory>{getLocalizedType(project.type_id)}</ProjectCategory>
+                  <ProjectTitle>{getLocalizedContent(project, 'title')}</ProjectTitle>
                   <StatusContainer>
-                    <StatusDot status={project.status} />
+                    <StatusDot status="completed" />
                     <StatusText>
-                      {translate(`status.${project.status}`, '') as string}
+                      {t('status.completed', 'Completed')}
                     </StatusText>
                   </StatusContainer>
-                  <ProjectDescription>{translate(`projects.${project.key}.description`, '') as string}</ProjectDescription>
+                  <ProjectDescription>{getLocalizedContent(project, 'description')}</ProjectDescription>
                   <ProjectLinks>
-                    {project.link && project.link.includes('github') && (
-                      <GitHubLink href={project.link} target="_blank" rel="noopener noreferrer" title="View on GitHub">
+                    {project.git_url && (
+                      <GitHubLink href={project.git_url} target="_blank" rel="noopener noreferrer" title="View on GitHub">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                         </svg>
-                        <span>{translate('actions.viewOnGitHub', 'View on GitHub') as string}</span>
+                        <span>{t('actions.viewOnGitHub', 'View on GitHub')}</span>
                       </GitHubLink>
                     )}
-                    {project.link && !project.link.includes('github') && project.link !== '#' && (
-                      <ProjectLink href={project.link} target="_blank" rel="noopener noreferrer">
-                        {translate('actions.viewProject', 'View Project') as string}
-                      </ProjectLink>
-                    )}
-                    {project.demoLink && (
-                      <DemoButton href={project.demoLink} target="_blank" rel="noopener noreferrer">
-                        {translate('actions.demo', 'Live Demo') as string}
+                    {project.demo_url && (
+                      <DemoButton href={project.demo_url} target="_blank" rel="noopener noreferrer">
+                        {t('actions.demo', 'Live Demo')}
                       </DemoButton>
                     )}
                   </ProjectLinks>
@@ -481,8 +583,8 @@ const ProjectsPage: React.FC = () => {
       
       <Modal isOpen={!!selectedImage} onClose={closeModal}>
         <ModalImage 
-          src={selectedImage?.src || ''} 
-          alt={selectedImage?.key ? (translate(`projects.${selectedImage.key}.title`, '') as string) : ''} 
+          src={selectedImage || ''} 
+          alt={selectedImage ? `Project ${selectedImage}` : ''} 
         />
       </Modal>
       

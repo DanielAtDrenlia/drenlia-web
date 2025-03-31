@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 interface InitialsAvatarProps {
-  name: string;
+  name?: string;
   size?: number;
 }
 
@@ -21,7 +21,7 @@ const AvatarContainer = styled.div<{ size: number; backgroundColor: string }>`
 `;
 
 // Generate a consistent color based on the name
-const getColorFromName = (name: string): string => {
+const getColorFromName = (name: string = 'User'): string => {
   // List of pleasant, accessible colors
   const colors = [
     '#3498db', // Blue
@@ -49,28 +49,19 @@ const getColorFromName = (name: string): string => {
   return colors[index];
 };
 
-// Extract initials from a name
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  
-  // Split the name by spaces
-  const nameParts = name.split(' ').filter(part => part.length > 0);
-  
-  if (nameParts.length === 0) return '';
-  
-  if (nameParts.length === 1) {
-    // If only one name, return first two letters or just first letter if name is one character
-    return nameParts[0].substring(0, Math.min(2, nameParts[0].length));
-  }
-  
-  // Return first letter of first name and first letter of last name
-  return `${nameParts[0].charAt(0)}${nameParts[nameParts.length - 1].charAt(0)}`;
+const getInitials = (name: string = 'User'): string => {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 };
 
-const InitialsAvatar: React.FC<InitialsAvatarProps> = ({ name, size = 200 }) => {
-  const initials = getInitials(name);
+const InitialsAvatar: React.FC<InitialsAvatarProps> = ({ name = 'User', size = 200 }) => {
   const backgroundColor = getColorFromName(name);
-  
+  const initials = getInitials(name);
+
   return (
     <AvatarContainer size={size} backgroundColor={backgroundColor}>
       {initials}

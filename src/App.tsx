@@ -7,8 +7,8 @@ import ScrollToTop from './components/ScrollToTop';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
-import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
+import ProjectsPage from './pages/ProjectsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -19,6 +19,7 @@ import AdminAboutPage from './pages/admin/AboutPage';
 import AdminTeamPage from './pages/admin/TeamPage';
 import AdminUsersPage from './pages/admin/UsersPage';
 import AdminSettingsPage from './pages/admin/SettingsPage';
+import AdminProjectsPage from './pages/admin/ProjectsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -57,8 +58,9 @@ function App() {
                 <Route index element={<AdminHomePage />} />
                 <Route path="about" element={<AdminAboutPage />} />
                 <Route path="team" element={<AdminTeamPage />} />
+                <Route path="projects" element={<ProtectedRoute requireAdmin={true}><AdminProjectsPage /></ProtectedRoute>} />
                 <Route path="users" element={<ProtectedRoute requireAdmin={true}><AdminUsersPage /></ProtectedRoute>} />
-                <Route path="settings" element={<ProtectedRoute requireAdmin={false}><AdminSettingsPage /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute requireAdmin={true}><AdminSettingsPage /></ProtectedRoute>} />
               </Route>
             </Route>
 

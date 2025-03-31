@@ -1,55 +1,52 @@
 const { createCanvas } = require('canvas');
 
+// Generate a consistent color based on the name
+function generateColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a pastel color
+  const hue = hash % 360;
+  return `hsl(${hue}, 70%, 85%)`;
+}
+
 /**
  * Generates a letter avatar with initials from a name
  * @param {string} name - The full name to generate initials from
- * @param {number} size - The size of the avatar in pixels
+ * @param {number} width - The width of the avatar in pixels
+ * @param {number} height - The height of the avatar in pixels
  * @returns {Buffer} - A PNG buffer containing the avatar
  */
-const generateLetterAvatar = (name, size = 200) => {
-  // Extract initials from name
-  const initials = name
-    .split(' ')
-    .map(part => part.charAt(0))
-    .join('')
-    .toUpperCase()
-    .substring(0, 2); // Get at most 2 initials
-
-  // Create canvas
-  const canvas = createCanvas(size, size);
+async function generateLetterAvatar(name, width = 200, height = 200) {
+  const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Define colors - pastel colors that work well with dark text
-  const colors = [
-    '#F4BFBF', // light pink
-    '#FFD9C0', // peach
-    '#FAF0D7', // cream
-    '#8CC0DE', // light blue
-    '#CCCCFF', // lavender
-    '#D8F8B7', // light green
-    '#FF9999', // salmon
-    '#FFDAB9', // peachpuff
-    '#B0E0E6', // powderblue
-    '#FFC0CB', // pink
-  ];
+  // Set background color
+  ctx.fillStyle = generateColor(name);
+  ctx.fillRect(0, 0, width, height);
 
-  // Get a consistent color based on the name
-  const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-  const bgColor = colors[colorIndex];
+  // Get initials (up to 3 characters)
+  const initials = name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 3);
 
-  // Draw background
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, size, size);
-
-  // Draw text
-  ctx.fillStyle = '#333333'; // Dark text for contrast
-  ctx.font = `bold ${size / 2}px Arial`;
+  // Configure text
+  ctx.fillStyle = '#1e293b';
+  ctx.font = `bold ${Math.min(width, height) * 0.4}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(initials, size / 2, size / 2);
 
+  // Draw text
+  ctx.fillText(initials, width / 2, height / 2);
+
+  // Return buffer
   return canvas.toBuffer('image/png');
-};
+}
 
 module.exports = {
   generateLetterAvatar

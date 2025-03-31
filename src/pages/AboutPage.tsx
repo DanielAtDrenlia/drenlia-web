@@ -7,6 +7,7 @@ import InitialsAvatar from '../components/InitialsAvatar';
 import type { TeamMember as ApiTeamMember } from '../services/apiService';
 import { getAboutSections, getTeamMembers } from '../services/apiService';
 import { usePreserveScroll } from '../hooks/usePreserveScroll';
+import ReactDOM from 'react-dom/client';
 
 const AboutContainer = styled.div`
   max-width: 1200px;
@@ -278,6 +279,10 @@ const TeamMember = styled.div<{ isVisible: boolean; index: number }>`
     border-radius: 50%;
     overflow: hidden;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     img {
       width: 100%;
@@ -396,6 +401,51 @@ const translateReact = (t: TFunction<'about', undefined>, key: string, defaultVa
   return t(key, defaultValue);
 };
 
+// Helper function to get team member content based on current language
+const getLocalizedTeamContent = (member: TeamMember, field: 'title' | 'bio', language: string): string => {
+  const isFrench = language === 'fr';
+  const frField = member[`fr_${field}`];
+  const enField = member[field];
+  
+  if (isFrench && frField) {
+    return frField;
+  }
+  return enField || '';
+};
+
+const TeamMemberComponent: React.FC<{
+  member: TeamMember;
+  isVisible: boolean;
+  index: number;
+}> = ({ member, isVisible, index }) => {
+  const [imageError, setImageError] = useState(false);
+  const { i18n } = useTranslation();
+
+  return (
+    <TeamMember
+      isVisible={isVisible}
+      index={index}
+    >
+      <div className="team-member-image">
+        {member.image_url && !imageError ? (
+          <img
+            src={member.image_url}
+            alt={member.name}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <InitialsAvatar name={member.name} size={120} />
+        )}
+      </div>
+      <h3>{member.name}</h3>
+      <h4>{getLocalizedTeamContent(member, 'title', i18n.language)}</h4>
+      {(member.bio || member.fr_bio) && (
+        <p>{getLocalizedTeamContent(member, 'bio', i18n.language)}</p>
+      )}
+    </TeamMember>
+  );
+};
+
 const AboutPage: React.FC = () => {
   const { t, i18n } = useTranslation('about');
   const [sections, setSections] = useState<AboutSectionType[]>([]);
@@ -416,18 +466,6 @@ const AboutPage: React.FC = () => {
       return section[`fr_${field}`];
     }
     return section[field];
-  };
-
-  // Helper function to get team member content based on current language
-  const getLocalizedTeamContent = (member: TeamMember, field: 'title' | 'bio'): string => {
-    const isFrench = i18n.language === 'fr';
-    const frField = member[`fr_${field}`];
-    const enField = member[field];
-    
-    if (isFrench && frField) {
-      return frField;
-    }
-    return enField || '';
   };
 
   // Fetch data from API
@@ -570,14 +608,42 @@ const AboutPage: React.FC = () => {
                 {getLocalizedContent(section, 'description')}
               </SectionText>
               <SectionImage isVisible={visibleSections[`section-${section.about_id}`]} isEven={isEven}>
-                <img
-                  src={section.image_url || '/images/placeholder.jpg'}
-                  alt={section.title}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/images/placeholder.jpg';
-                  }}
-                />
+                {section.image_url ? (
+                  <img
+                    src={section.image_url}
+                    alt={section.title}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.parentElement?.querySelector('div')?.style.removeProperty('display');
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: '#666'
+                  }}>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="48" 
+                      height="48" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
               </SectionImage>
             </SectionContent>
           </AboutSection>
@@ -597,31 +663,12 @@ const AboutPage: React.FC = () => {
         </SectionTitle>
         <TeamGrid>
           {teamMembers.map((member, index) => (
-            <TeamMember
+            <TeamMemberComponent
               key={member.member_id}
+              member={member}
               isVisible={visibleSections.team}
               index={index}
-            >
-              {member.image_url ? (
-                <div className="team-member-image">
-                  <img
-                    src={member.image_url}
-                    alt={member.name}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/images/placeholder.jpg';
-                    }}
-                  />
-                </div>
-              ) : (
-                <InitialsAvatar name={member.name} size={120} />
-              )}
-              <h3>{member.name}</h3>
-              <h4>{getLocalizedTeamContent(member, 'title')}</h4>
-              {(member.bio || member.fr_bio) && (
-                <p>{getLocalizedTeamContent(member, 'bio')}</p>
-              )}
-            </TeamMember>
+            />
           ))}
         </TeamGrid>
       </TeamSection>

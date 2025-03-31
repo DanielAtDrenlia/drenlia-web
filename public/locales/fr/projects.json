@@ -1,35 +1,22 @@
 {
   "title": "Nos Projets",
-  "subtitle": "Découvrez notre portfolio de solutions numériques innovantes qui ont aidé certains de nos clients à atteindre leurs objectifs.",
+  "subtitle": "Découvrez notre portfolio de solutions numériques réussies",
   "filters": {
-    "all": "Tous les Projets",
-    "web": "Développement Web",
-    "mobile": "Applications Mobiles"
+    "all": "Tous",
+    "web": "Web",
+    "mobile": "Mobile"
   },
   "status": {
-    "completed": "Terminé",
-    "in-progress": "En Cours"
+    "pending-approval": "En attente d'approbation",
+    "planned": "Planifié",
+    "in-progress": "En cours",
+    "under-review": "En révision",
+    "testing": "En test",
+    "completed": "Terminé"
   },
   "actions": {
-    "viewProject": "Voir le Projet",
-    "demo": "Démo"
-  },
-  "projects": {
-    "kanban": {
-      "title": "Application Kanban",
-      "description": "Une application de tableau kanban simple, gratuite et open source pour la gestion rapide des tâches avec fonctionnalité glisser-déposer, attribution des tâches et suivi des progrès."
-    },
-    "teamScheduler": {
-      "title": "Planificateur d'Équipe",
-      "description": "Une application de calendrier collaborative gratuite et open source qui permet aux équipes de planifier les quarts de travail, de glisser-déposer les horaires, et plus encore. Planifiez facilement les quarts de travail de votre équipe !"
-    },
-    "secureMail": {
-      "title": "Messagerie Sécurisée",
-      "description": "Une plateforme de messagerie cryptée avec des fonctionnalités de sécurité avancées, garantissant la confidentialité et la protection de vos communications."
-    },
-    "clueCam": {
-      "title": "ClueCam",
-      "description": "Une application mobile qui utilise la caméra pour localiser des objets en temps réel, parfaite pour l'apprentissage et l'exploration."
-    }
+    "viewOnGitHub": "Voir sur GitHub",
+    "viewProject": "Voir le projet",
+    "demo": "Démo en direct"
   }
 } 

@@ -253,18 +253,15 @@ const Features: React.FC = () => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         // Only set visible if the section is significantly in view
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
-          // Add a small delay to ensure smooth scrolling has completed
-          setTimeout(() => {
-            setIsVisible(true);
-          }, 100);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+          setIsVisible(true);
         } else {
           setIsVisible(false);
         }
       },
       {
-        threshold: [0.3], // Require 30% of the section to be visible
-        rootMargin: '-10% 0px' // Trigger slightly after entering viewport
+        threshold: [0.2], // Require 20% of the section to be visible
+        rootMargin: '0px' // Trigger as soon as the section starts entering viewport
       }
     );
     
@@ -300,33 +297,33 @@ const Features: React.FC = () => {
   const services = [
     {
       icon: <DevServicesIcon />,
-      title: translateString(t, 'categories.dev.title', 'Dev Services'),
-      description: translateString(t, 'categories.dev.description', 'We create responsive websites and mobile applications using the latest technologies to ensure your digital products stand out and perform across all devices.')
+      title: translateString(t, 'categories.service1.title', 'Customer Service'),
+      description: translateString(t, 'categories.service1.description', 'We help businesses enhance their customer interactions through comprehensive support solutions and satisfaction improvement strategies.')
     },
     {
       icon: <ConsultingIcon />,
-      title: translateString(t, 'categories.consulting.title', 'IT Consulting'),
-      description: translateString(t, 'categories.consulting.description', 'Our expert consultants provide strategic guidance to optimize your IT infrastructure, improve efficiency, and align technology with your business goals.')
+      title: translateString(t, 'categories.service2.title', 'Training & Education'),
+      description: translateString(t, 'categories.service2.description', 'Our expert consultants provide tailored training programs and educational solutions to develop your team\'s skills and knowledge.')
     },
     {
       icon: <MigrationIcon />,
-      title: translateString(t, 'categories.migration.title', 'Infrastructure Migration'),
-      description: translateString(t, 'categories.migration.description', 'We help you seamlessly transition to new infrastructure solutions, minimizing downtime and ensuring a smooth migration process.')
+      title: translateString(t, 'categories.service3.title', 'Marketing & Branding'),
+      description: translateString(t, 'categories.service3.description', 'We help you build a strong brand identity and develop effective marketing strategies to increase your market visibility.')
     },
     {
       icon: <MonitoringIcon />,
-      title: translateString(t, 'categories.monitoring.title', 'Monitoring'),
-      description: translateString(t, 'categories.monitoring.description', 'Our comprehensive monitoring solutions provide real-time insights into your systems, helping you prevent issues before they impact your business.')
+      title: translateString(t, 'categories.service4.title', 'Financial Planning'),
+      description: translateString(t, 'categories.service4.description', 'Our comprehensive financial planning services help you manage resources effectively and develop sound financial strategies.')
     },
     {
       icon: <DevOpsIcon />,
-      title: translateString(t, 'categories.devops.title', 'DevOps/SysOps'),
-      description: translateString(t, 'categories.devops.description', 'We implement efficient DevOps practices and system operations to streamline your development pipeline and improve deployment reliability.')
+      title: translateString(t, 'categories.service5.title', 'Operations Management'),
+      description: translateString(t, 'categories.service5.description', 'We implement efficient operational processes to streamline your daily activities and improve overall business efficiency.')
     },
     {
       icon: <LinuxIcon />,
-      title: translateString(t, 'categories.linux.title', 'Linux Admin'),
-      description: translateString(t, 'categories.linux.description', 'With extensive Linux administration knowledge, we can help you manage your Linux environment and ensure they are running smoothly and securely.')
+      title: translateString(t, 'categories.service6.title', 'Strategic Planning'),
+      description: translateString(t, 'categories.service6.description', 'With our strategic planning expertise, we help organizations set clear goals and develop effective paths to achieve them.')
     }
   ];
   

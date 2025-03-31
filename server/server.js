@@ -1,4 +1,37 @@
-require('dotenv').config();
+// Custom dotenv config to handle comments and empty lines
+const fs = require('fs');
+const dotenv = require('dotenv');
+const path = require('path');
+const { exec } = require('child_process');
+const net = require('net');
+const { spawn } = require('child_process');
+
+// Load .env file
+try {
+  const envPath = path.join(__dirname, '.env');
+  console.log('Loading environment variables from:', envPath);
+  
+  const result = dotenv.config({ path: envPath });
+  
+  if (result.error) {
+    throw result.error;
+  }
+  
+  console.log('Environment variables loaded successfully');
+  console.log('Email configuration:', {
+    EMAIL_HOST: process.env.EMAIL_HOST,
+    EMAIL_PORT: process.env.EMAIL_PORT,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_TO: process.env.EMAIL_TO,
+    // Don't log EMAIL_PASS for security
+  });
+} catch (error) {
+  console.warn('Warning: .env file not found or has invalid format:', error);
+  console.warn('Current working directory:', process.cwd());
+  console.warn('__dirname:', __dirname);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,14 +42,13 @@ const passport = require('passport');
 const db = require('./db');
 const auth = require('./auth');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const fsPromises = require('fs').promises;
 const { createCanvas } = require('canvas');
 const translateRouter = require('./routes/translate');
 const { generateLetterAvatar } = require('./utils/avatarGenerator');
 const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt
+const { getSettings, updateSetting } = require('./services/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3011;
@@ -50,30 +82,28 @@ app.use(passport.session());
 app.use(helmet({
   contentSecurityPolicy: false // Disable CSP to allow SVG rendering
 }));
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // List of allowed origins
-    const allowedOrigins = [
-      'https://drenlia.com',
-      'https://dev.drenlia.com',
-      'http://localhost:3010'
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+
+// CORS configuration
+const corsOptions = {
+  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3010,http://localhost:5173').split(','),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Custom middleware to handle cache control for video file
+app.use('/videos/background.mp4', (req, res, next) => {
+  // Allow caching for 1 year, but require revalidation
+  res.setHeader('Cache-Control', 'public, max-age=31536000, must-revalidate');
+  next();
+});
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
@@ -82,13 +112,31 @@ const transporter = nodemailer.createTransport({
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Verify email configuration on startup
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('Email verification failed:', error);
+    console.error('Email config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
+      to: process.env.EMAIL_TO,
+      pass_length: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 0
+    });
+  } else {
+    console.log('Email server is ready to send messages');
   }
 });
 
 // Configure multer for file uploads
 const teamImagesDir = path.join(__dirname, '../public/images/team');
 const aboutImagesDir = path.join(__dirname, '../public/images/about');
+const projectImagesDir = path.join(__dirname, '../public/images/projects');
 
 // Ensure the directories exist
 if (!fs.existsSync(teamImagesDir)) {
@@ -96,6 +144,9 @@ if (!fs.existsSync(teamImagesDir)) {
 }
 if (!fs.existsSync(aboutImagesDir)) {
   fs.mkdirSync(aboutImagesDir, { recursive: true });
+}
+if (!fs.existsSync(projectImagesDir)) {
+  fs.mkdirSync(projectImagesDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
@@ -105,6 +156,8 @@ const storage = multer.diskStorage({
       cb(null, teamImagesDir);
     } else if (req.originalUrl.includes('/upload/about-image')) {
       cb(null, aboutImagesDir);
+    } else if (req.originalUrl.includes('/upload/project-image')) {
+      cb(null, projectImagesDir);
     } else {
       // Default to team images directory
       cb(null, teamImagesDir);
@@ -134,6 +187,50 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB max file size
+  }
+});
+
+// Configure multer for file upload
+const logoImagesDir = path.join(__dirname, '../public/images/logo');
+
+// Ensure the logo directory exists
+if (!fs.existsSync(logoImagesDir)) {
+  fs.mkdirSync(logoImagesDir, { recursive: true });
+}
+
+const logoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, logoImagesDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'logo.png');
+  }
+});
+
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed!'));
+    }
+    cb(null, true);
+  }
+});
+
+// Create directories for uploads if they don't exist
+const uploadDirs = {
+  logo: path.join(__dirname, '..', 'public', 'images', 'logo'),
+  team: path.join(__dirname, '..', 'public', 'images', 'team'),
+  about: path.join(__dirname, '..', 'public', 'images', 'about'),
+  video: path.join(__dirname, '..', 'public', 'videos')
+};
+
+Object.values(uploadDirs).forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 });
 
@@ -238,84 +335,60 @@ app.get('/api/auth/status', (req, res) => {
   }
 });
 
-// Move the local login endpoint here, before other routes
+// Auth endpoints
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
+    
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and password are required' 
       });
     }
 
-    // Get user by email
     const user = db.users.getUserByEmail(email);
-    
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
       });
     }
 
-    // Check if user has a password (is a local account)
-    if (!user.password_hash) {
-      return res.status(401).json({
-        success: false,
-        message: 'This account uses Google authentication'
-      });
-    }
-
-    // Verify password
     const isValid = await bcrypt.compare(password, user.password_hash);
-    
     if (!isValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid email or password' 
       });
     }
 
-    // Set user in session using Passport
+    // Log the user in
     req.login(user, (err) => {
       if (err) {
         console.error('Error logging in user:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Error during login'
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Error logging in' 
         });
       }
-
-      // Save session before sending response
-      req.session.save((err) => {
-        if (err) {
-          console.error('Error saving session:', err);
-          return res.status(500).json({
-            success: false,
-            message: 'Error during login'
-          });
+      
+      res.json({ 
+        success: true,
+        user: {
+          id: user.user_id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          admin: !!user.admin
         }
-
-        res.json({
-          success: true,
-          user: {
-            id: user.user_id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            isAdmin: !!user.admin
-          }
-        });
       });
     });
-
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error during login'
+    console.error('Error in login endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error' 
     });
   }
 });
@@ -486,14 +559,14 @@ app.post('/api/admin/about', auth.isAdmin, (req, res) => {
   try {
     const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
-    if (!title || !description) {
-      return res.status(400).json({ success: false, message: 'Title and description are required' });
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Title is required' });
     }
     
     const id = db.about.createSection({
       title,
       fr_title: fr_title || null,
-      description,
+      description: description || '',
       fr_description: fr_description || null,
       image_url: image_url || null,
       display_order: display_order || 0
@@ -534,6 +607,28 @@ app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
     const id = parseInt(req.params.id);
     const { title, fr_title, description, fr_description, image_url, display_order } = req.body;
     
+    // Get current section to handle image removal
+    const currentSection = db.about.getSectionById(id);
+    if (!currentSection) {
+      return res.status(404).json({ success: false, message: 'Section not found' });
+    }
+
+    // Handle image removal if image_url is null or empty
+    if (image_url === null || image_url === '') {
+      // Try to delete the old image file if it exists
+      if (currentSection.image_url && currentSection.image_url.startsWith('/images/about/')) {
+        const oldImagePath = path.join(__dirname, '..', 'public', currentSection.image_url);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete about section image file:', err.message);
+          } else {
+            console.log('Successfully deleted about section image file:', oldImagePath);
+          }
+        });
+      }
+    }
+    
     const success = db.about.updateSection(id, {
       title,
       fr_title,
@@ -557,9 +652,27 @@ app.put('/api/admin/about/:id', auth.isAdmin, (req, res) => {
 app.delete('/api/admin/about/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // Get the section's current image URL before deleting
+    const section = db.about.getSectionById(id);
+    if (!section) {
+      return res.status(404).json({ success: false, message: 'Section not found' });
+    }
+
+    // Delete the section from the database
     const success = db.about.deleteSection(id);
     
     if (success) {
+      // Try to delete the image file if it exists
+      if (section.image_url && section.image_url.startsWith('/images/about/')) {
+        const imagePath = path.join(__dirname, '..', 'public', section.image_url);
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete about section image file:', err.message);
+          }
+        });
+      }
       res.json({ success: true });
     } else {
       res.status(404).json({ success: false, message: 'Section not found' });
@@ -581,9 +694,30 @@ app.get('/api/team', (req, res) => {
   }
 });
 
-app.post('/api/admin/team', auth.isAdmin, (req, res) => {
+// Team member reorder endpoint
+app.put('/api/admin/team/reorder', auth.isAdmin, (req, res) => {
   try {
-    const { name, title, bio, image_url, display_order } = req.body;
+    const { members } = req.body;
+    
+    if (!Array.isArray(members) || members.length === 0) {
+      return res.status(400).json({ success: false, message: 'Members array is required' });
+    }
+    
+    const success = db.team.updateMemberOrders(members);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to update team member orders' });
+    }
+  } catch (error) {
+    console.error('Error updating team member orders:', error);
+    res.status(500).json({ success: false, message: 'Error updating team member orders' });
+  }
+});
+
+app.post('/api/admin/team', auth.isAdmin, async (req, res) => {
+  try {
+    const { name, title, bio, image_url, display_order, fr_title, fr_bio, email } = req.body;
     
     if (!name || !title) {
       return res.status(400).json({ success: false, message: 'Name and title are required' });
@@ -592,22 +726,31 @@ app.post('/api/admin/team', auth.isAdmin, (req, res) => {
     // If no image_url is provided, generate a letter avatar
     let finalImageUrl = image_url;
     if (!finalImageUrl) {
-      // Generate a unique filename
-      const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
-      const avatarPath = path.join(teamImagesDir, filename);
-      
-      // Generate and save the avatar
-      const avatarBuffer = generateLetterAvatar(name);
-      fs.writeFileSync(avatarPath, avatarBuffer);
-      
-      // Set the image URL to the generated avatar
-      finalImageUrl = `/images/team/${filename}`;
+      try {
+        // Generate a unique filename
+        const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+        const avatarPath = path.join(teamImagesDir, filename);
+        
+        // Generate and save the avatar
+        const avatarBuffer = await generateLetterAvatar(name);
+        fs.writeFileSync(avatarPath, avatarBuffer);
+        
+        // Set the image URL to the generated avatar
+        finalImageUrl = `/images/team/${filename}`;
+      } catch (avatarError) {
+        console.error('Error generating avatar:', avatarError);
+        // If avatar generation fails, use a default avatar
+        finalImageUrl = '/images/team/default-avatar.png';
+      }
     }
     
     const id = db.team.createMember({
       name,
       title,
       bio,
+      fr_title,
+      fr_bio,
+      email,
       image_url: finalImageUrl,
       display_order: display_order || 0
     });
@@ -660,16 +803,33 @@ app.put('/api/admin/team/:id', auth.isAuthenticatedOrAdmin, async (req, res) => 
     
     // Handle image removal and avatar generation
     if (image_url === null || image_url === '') {
+      // Try to delete the old image file if it exists
+      if (currentMember.image_url && currentMember.image_url.startsWith('/images/team/')) {
+        const oldImagePath = path.join(__dirname, '..', 'public', currentMember.image_url);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete old team member image file:', err.message);
+          }
+        });
+      }
+
       // Generate a unique filename
       const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
       const avatarPath = path.join(teamImagesDir, filename);
       
-      // Generate and save the avatar
-      const avatarBuffer = generateLetterAvatar(name);
-      fs.writeFileSync(avatarPath, avatarBuffer);
-      
-      // Set the image URL to the generated avatar
-      updateData.image_url = `/images/team/${filename}`;
+      try {
+        // Generate and save the avatar
+        const avatarBuffer = await generateLetterAvatar(name);
+        fs.writeFileSync(avatarPath, avatarBuffer);
+        
+        // Set the image URL to the generated avatar
+        updateData.image_url = `/images/team/${filename}`;
+      } catch (avatarError) {
+        console.error('Error generating avatar:', avatarError);
+        // If avatar generation fails, use a default avatar
+        updateData.image_url = '/images/team/default-avatar.png';
+      }
     }
     
     const success = db.team.updateMember(id, updateData);
@@ -688,9 +848,27 @@ app.put('/api/admin/team/:id', auth.isAuthenticatedOrAdmin, async (req, res) => 
 app.delete('/api/admin/team/:id', auth.isAdmin, (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // Get the member's current image URL before deleting
+    const member = db.team.getMemberById(id);
+    if (!member) {
+      return res.status(404).json({ success: false, message: 'Team member not found' });
+    }
+
+    // Delete the member from the database
     const success = db.team.deleteMember(id);
     
     if (success) {
+      // Try to delete the image file if it exists
+      if (member.image_url && member.image_url.startsWith('/images/team/')) {
+        const imagePath = path.join(__dirname, '..', 'public', member.image_url);
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            // Silently ignore file deletion errors
+            console.log('Note: Could not delete team member image file:', err.message);
+          }
+        });
+      }
       res.json({ success: true });
     } else {
       res.status(404).json({ success: false, message: 'Team member not found' });
@@ -702,10 +880,24 @@ app.delete('/api/admin/team/:id', auth.isAdmin, (req, res) => {
 });
 
 // File upload endpoint for team member profile pictures
-app.post('/api/admin/upload/team-image', auth.isAdmin, upload.single('image'), (req, res) => {
+app.post('/api/admin/upload/team-image', auth.isAuthenticated, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    // If user is not an admin, check if they're editing their own profile
+    if (!req.user.admin) {
+      // Get the team member by email
+      const teamMembers = db.team.getAllMembers();
+      const userTeamMember = teamMembers.find(member => member.email === req.user.email);
+      
+      if (!userTeamMember) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'You can only upload images for your own profile' 
+        });
+      }
     }
     
     // Return the path to the uploaded file (relative to public directory)
@@ -745,6 +937,148 @@ app.post('/api/admin/upload/about-image', auth.isAdmin, upload.single('image'), 
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ success: false, message: 'Error uploading file' });
+  }
+});
+
+// Logo upload endpoint
+app.post('/api/admin/logo', auth.isAuthenticated, auth.isAdmin, logoUpload.single('logo'), async (req, res) => {
+  try {
+    console.log('Logo upload request received:', {
+      file: req.file,
+      body: req.body,
+      headers: req.headers
+    });
+
+    let logoPath = '/images/logo/logo.png';
+
+    if (req.file) {
+      console.log('File uploaded successfully:', req.file);
+      // Use the uploaded file
+      logoPath = `/images/logo/${req.file.filename}`;
+    } else {
+      console.log('No file uploaded, generating logo from site name');
+      // Generate a new logo from site name
+      const siteName = db.settings.getSetting('site_name') || 'Company Name';
+      const timestamp = Date.now();
+      const randomNum = Math.floor(Math.random() * 1000);
+      const filename = `logo-${timestamp}-${randomNum}.png`;
+      
+      // Use the correct path for the public directory
+      const logoDir = path.join(__dirname, '..', 'public', 'images', 'logo');
+      const filepath = path.join(logoDir, filename);
+
+      console.log('Creating logo directory:', logoDir);
+      // Ensure the directory exists
+      await fs.promises.mkdir(logoDir, { recursive: true });
+
+      console.log('Generating logo for site name:', siteName);
+      // Generate and save the logo
+      const avatarBuffer = await generateLetterAvatar(siteName, 200, 100);
+      
+      console.log('Saving logo to:', filepath);
+      await fs.promises.writeFile(filepath, avatarBuffer);
+      logoPath = `/images/logo/${filename}`;
+    }
+
+    console.log('Updating logo path in settings:', logoPath);
+    // Update the logo path in settings
+    db.settings.setSetting('logo_path', logoPath);
+
+    res.json({
+      success: true,
+      path: logoPath
+    });
+  } catch (error) {
+    console.error('Error handling logo:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to handle logo',
+      error: error.message
+    });
+  }
+});
+
+// Configure multer for video uploads
+const videoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const videosDir = path.join(__dirname, '..', 'public', 'videos');
+    if (!fs.existsSync(videosDir)) {
+      fs.mkdirSync(videosDir, { recursive: true });
+    }
+    cb(null, videosDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'background.mp4');
+  }
+});
+
+const videoUpload = multer({
+  storage: videoStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (!file.mimetype.startsWith('video/')) {
+      return cb(new Error('Only video files are allowed!'));
+    }
+    cb(null, true);
+  }
+});
+
+// Video upload endpoint
+app.post('/api/settings/upload-video', auth.isAdmin, videoUpload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    // Validate file type
+    if (!req.file.mimetype.startsWith('video/')) {
+      return res.status(400).json({ error: 'File must be a video' });
+    }
+
+    // Generate a version timestamp
+    const version = Date.now();
+
+    // Update settings with the new video path and version
+    const videoPath = '/videos/background.mp4';
+    await updateSetting('heroVideoPath', videoPath);
+    await updateSetting('heroVideoVersion', version.toString());
+
+    res.json({ videoPath, version });
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    
+    // Handle specific multer errors
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        error: 'Video file is too large. Maximum size is 50MB. Please compress your video or choose a smaller file.' 
+      });
+    }
+    
+    res.status(500).json({ error: 'Failed to upload video' });
+  }
+});
+
+// Video deletion endpoint
+app.delete('/api/settings/delete-video', auth.isAdmin, async (req, res) => {
+  try {
+    // Delete the video file
+    const videoPath = path.join(__dirname, '..', 'public', 'videos', 'background.mp4');
+    if (fs.existsSync(videoPath)) {
+      fs.unlinkSync(videoPath);
+      console.log('Video file deleted successfully:', videoPath);
+    }
+
+    // Update settings to remove the video path and version
+    await updateSetting('heroVideoPath', '');
+    await updateSetting('heroVideoVersion', '');
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting video:', error);
+    res.status(500).json({ error: 'Failed to delete video' });
   }
 });
 
@@ -858,22 +1192,29 @@ app.post('/api/send-email', async (req, res) => {
   }
   
   try {
-    const { name, email, subject, message } = req.body;
-    
+    const { name, email, message } = req.body;
+
     // Validate input
     if (!name || !email || !message) {
       return res.status(400).json({ success: false, message: 'Please provide name, email, and message' });
     }
     
-    // Email options
+    console.log('Attempting to send email with config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
+      to: process.env.EMAIL_TO
+    });
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: process.env.EMAIL_TO,
       replyTo: email,
-      subject: subject || `New message from ${name} via Drenlia website`,
+      subject: `New message from ${name} via website`,
       text: `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`,
       html: `
-        <h3>Drenlia Contact Form Submission</h3>
+        <h3>Contact Form Submission</h3>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Message:</strong></p>
@@ -881,38 +1222,91 @@ app.post('/api/send-email', async (req, res) => {
       `
     };
     
+    console.log('Sending email with options:', mailOptions);
+    
     // Send email
     const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info);
     
     // Reset captcha verification after successful submission
     req.session.captchaVerified = false;
     
     res.status(200).json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
-    console.error('Error sending email:', error.message);
+    console.error('Error sending email:', error);
+    console.error('Full error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
     
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to send email'
+      message: 'Failed to send email',
+      error: error.message
     });
   }
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok',
-    version: db.settings.getSetting('version') || '1.0.0'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check if email configuration is valid
+    const hasValidEmailConfig = process.env.EMAIL_HOST && 
+                               process.env.EMAIL_PORT && 
+                               process.env.EMAIL_USER && 
+                               process.env.EMAIL_PASS && 
+                               process.env.EMAIL_FROM && 
+                               process.env.EMAIL_TO &&
+                               process.env.EMAIL_USER !== 'your-email@example.com' &&
+                               process.env.EMAIL_PASS !== 'yourpassword';
+
+    // Test the email connection if configured
+    if (hasValidEmailConfig) {
+      await transporter.verify();
+    }
+
+    res.json({
+      success: true,
+      emailService: {
+        configured: hasValidEmailConfig,
+        status: hasValidEmailConfig ? 'ready' : 'not_configured'
+      }
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.json({
+      success: true,
+      emailService: {
+        configured: false,
+        status: 'error',
+        error: error.message
+      }
+    });
+  }
 });
 
 // Settings routes
-app.get('/api/admin/settings', auth.isAuthenticated, (req, res) => {
+app.get('/api/settings', (req, res) => {
+  try {
+    // Only return specific settings that are safe to expose publicly
+    const settings = db.settings.getAllSettings().filter(setting => 
+      ['contact_email', 'site_name', 'heroVideoPath', 'heroVideoVersion'].includes(setting.key)
+    );
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching settings' });
+  }
+});
+
+app.get('/api/admin/settings', auth.isAuthenticated, auth.isAdmin, (req, res) => {
   try {
     const settings = db.settings.getAllSettings();
     res.json({ success: true, settings });
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    console.error('Error fetching admin settings:', error);
     res.status(500).json({ success: false, message: 'Error fetching settings' });
   }
 });
@@ -1030,11 +1424,52 @@ app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
         path: filePath
       });
     }
-    
-    // Write the updated content back to the file
-    await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
-    
-    res.json({ success: true });
+
+    // Validate that content is a valid object
+    if (typeof content !== 'object' || content === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content must be a valid JSON object'
+      });
+    }
+
+    // Create a backup of the current file
+    const backupPath = `${filePath}.backup`;
+    try {
+      await fsPromises.copyFile(filePath, backupPath);
+    } catch (error) {
+      console.error('Failed to create backup:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create backup before update',
+        error: error.message
+      });
+    }
+
+    try {
+      // Write the updated content back to the file
+      await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8');
+      
+      // If successful, remove the backup
+      await fsPromises.unlink(backupPath);
+      
+      res.json({ success: true });
+    } catch (error) {
+      // If write fails, restore from backup
+      try {
+        await fsPromises.copyFile(backupPath, filePath);
+        await fsPromises.unlink(backupPath);
+      } catch (restoreError) {
+        console.error('Failed to restore from backup:', restoreError);
+      }
+      
+      console.error('Error updating translation:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error updating translation',
+        error: error.message 
+      });
+    }
   } catch (error) {
     console.error('Error updating translation:', error);
     res.status(500).json({ 
@@ -1047,6 +1482,326 @@ app.post('/api/admin/translations', auth.isAdmin, async (req, res) => {
 
 // Routes
 app.use('/api/translate', translateRouter);
+
+// Stop setup service endpoint
+app.post('/api/admin/setup/stop', auth.isAdmin, (req, res) => {
+  try {
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    // Create the flag file to disable setup
+    fs.writeFile(flagPath, '', (writeError) => {
+      if (writeError) {
+        console.error('Error creating setup disabled flag:', writeError);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to disable setup service',
+          details: writeError.message
+        });
+      }
+
+      // Kill processes listening on setup ports
+      exec('lsof -ti:3012,3013 | xargs kill -9 2>/dev/null || true', (error) => {
+        if (error && error.code !== 1) { // Ignore "no process found" error
+          console.error('Error killing setup processes:', error);
+        }
+        
+        res.json({ 
+          success: true,
+          message: 'Setup service stopped and disabled successfully',
+          output: 'Setup service stopped and disabled'
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Error in stop setup service endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Start setup service endpoint
+app.post('/api/admin/setup/start', auth.isAdmin, (req, res) => {
+  try {
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    // Remove the flag file to enable setup
+    fs.unlink(flagPath, (unlinkError) => {
+      if (unlinkError) {
+        console.error('Error removing setup disabled flag:', unlinkError);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to enable setup service',
+          details: unlinkError.message
+        });
+      }
+
+      // Start the service in the background
+      const setupProcess = spawn('npm', ['run', 'start'], { 
+        cwd: setupPath,
+        detached: true,
+        stdio: 'ignore'
+      });
+
+      // Unref the process so it can run independently
+      setupProcess.unref();
+
+      res.json({ 
+        success: true, 
+        message: 'Setup service started and enabled successfully',
+        output: 'Setup service started in the background'
+      });
+    });
+  } catch (error) {
+    console.error('Error in start setup service endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Check if a port is in use
+const isPortInUse = (port) => {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    
+    server.once('listening', () => {
+      server.close();
+      resolve(false);
+    });
+    
+    server.listen(port);
+  });
+};
+
+// Check setup service status endpoint
+app.get('/api/admin/setup/status', auth.isAdmin, async (req, res) => {
+  try {
+    const [port3012InUse, port3013InUse] = await Promise.all([
+      isPortInUse(3012),
+      isPortInUse(3013)
+    ]);
+    
+    const setupPath = path.join(__dirname, '../setup');
+    const flagPath = path.join(__dirname, '../.setup-disabled');
+    
+    const setupExists = fs.existsSync(setupPath);
+    const isDisabled = fs.existsSync(flagPath);
+    
+    res.json({
+      success: true,
+      isRunning: port3012InUse || port3013InUse,
+      ports: {
+        3012: port3012InUse,
+        3013: port3013InUse
+      },
+      directories: {
+        setup: setupExists,
+        disabled: isDisabled
+      }
+    });
+  } catch (error) {
+    console.error('Error checking setup service status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check setup service status',
+      details: error.message
+    });
+  }
+});
+
+// Project endpoints
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await db.project.getAllProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+app.get('/api/projects/:id', async (req, res) => {
+  try {
+    const project = await db.project.getProjectById(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
+});
+
+app.put('/api/admin/projects/reorder', auth.isAdmin, (req, res) => {
+  console.log('Received project reorder request');
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
+  const { projects } = req.body;
+  console.log('Extracted projects array:', JSON.stringify(projects, null, 2));
+  
+  if (!Array.isArray(projects)) {
+    console.log('Invalid request: projects is not an array');
+    return res.status(400).json({ error: 'Invalid request: projects must be an array' });
+  }
+
+  const result = db.project.updateProjectOrders(projects);
+  console.log('Database update result:', JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: result.message });
+  }
+});
+
+// Admin project endpoints
+app.post('/api/admin/projects', auth.isAdmin, async (req, res) => {
+  try {
+    const project = req.body;
+    const result = await db.project.createProject(project);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
+app.put('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const result = await db.project.updateProject(id, req.body);
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ success: false, message: 'Failed to update project' });
+  }
+});
+
+app.delete('/api/admin/projects/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const success = await db.project.deleteProject(parseInt(req.params.id));
+    if (!success) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// File upload endpoint for project images
+app.post('/api/admin/upload/project-image', auth.isAdmin, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    
+    // Return the path to the uploaded file (relative to public directory)
+    const imagePath = `/images/projects/${req.file.filename}`;
+    
+    res.json({ 
+      success: true, 
+      imagePath: imagePath
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ success: false, message: 'Error uploading file' });
+  }
+});
+
+// Project Types endpoints
+app.get('/api/project-types', async (req, res) => {
+  try {
+    const projectTypes = await db.projectTypes.getAllProjectTypes();
+    res.json(projectTypes);
+  } catch (error) {
+    console.error('Error fetching project types:', error);
+    res.status(500).json({ error: 'Failed to fetch project types' });
+  }
+});
+
+app.post('/api/admin/project-types', auth.isAdmin, async (req, res) => {
+  try {
+    const { type, fr_type } = req.body;
+    
+    if (!type) {
+      res.status(400).json({ error: 'Type is required' });
+      return;
+    }
+
+    const result = await db.projectTypes.createProjectType({ type, fr_type });
+    res.json({
+      id: result.id,
+      success: true
+    });
+  } catch (error) {
+    console.error('Error creating project type:', error);
+    res.status(500).json({ error: 'Failed to create project type' });
+  }
+});
+
+app.put('/api/admin/project-types/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, fr_type } = req.body;
+
+    if (!type) {
+      res.status(400).json({ error: 'Type is required' });
+      return;
+    }
+
+    const success = await db.projectTypes.updateProjectType(id, { type, fr_type });
+    if (!success) {
+      res.status(404).json({ error: 'Project type not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating project type:', error);
+    res.status(500).json({ error: 'Failed to update project type' });
+  }
+});
+
+app.delete('/api/admin/project-types/:id', auth.isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await db.projectTypes.deleteProjectType(id);
+    
+    if (!success) {
+      res.status(404).json({ error: 'Project type not found' });
+      return;
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project type:', error);
+    res.status(500).json({ error: 'Failed to delete project type' });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

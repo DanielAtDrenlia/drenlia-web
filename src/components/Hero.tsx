@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { useSettings } from '../services/settingsService';
 
 const HeroContainer = styled.section`
   height: 80vh;
@@ -154,12 +155,23 @@ const translateReact = (t: TFunction<'home', undefined>, key: string, defaultVal
 const Hero: React.FC = () => {
   const { t, i18n } = useTranslation('home');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { settings, isLoading } = useSettings();
   
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = 0.5;
     }
   }, []);
+
+  useEffect(() => {
+    if (settings) {
+      console.log('Settings loaded:', settings);
+      const videoPath = settings.find(s => s.key === 'heroVideoPath')?.value;
+      const videoVersion = settings.find(s => s.key === 'heroVideoVersion')?.value;
+      console.log('Video path:', videoPath);
+      console.log('Video version:', videoVersion);
+    }
+  }, [settings]);
   
   const scrollToServices = () => {
     const servicesSection = document.getElementById('services-section');
@@ -168,16 +180,23 @@ const Hero: React.FC = () => {
     }
   };
 
+  const videoVersion = settings?.find(s => s.key === 'heroVideoVersion')?.value;
+  const videoPath = settings?.find(s => s.key === 'heroVideoPath')?.value || '/videos/background.mp4';
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <HeroContainer>
       <VideoBackground autoPlay loop muted playsInline ref={videoRef}>
-        <source src="/videos/abstract.mp4" type="video/mp4" />
+        <source src={`${videoPath}${videoVersion ? `?v=${videoVersion}` : ''}`} type="video/mp4" />
         Your browser does not support the video tag.
       </VideoBackground>
       <Overlay />
       <HeroContent>
         <HeroTitle>
-          {translateReact(t, 'hero.title', 'Welcome to Drenlia')}
+          {translateReact(t, 'hero.title', 'Welcome to Company Name')}
         </HeroTitle>
         <HeroSubtitle>
           {translateReact(t, 'hero.subtitle', 'Your Digital Solutions Partner')}
@@ -186,9 +205,6 @@ const Hero: React.FC = () => {
           <ServicesButton onClick={scrollToServices}>
             {translateReact(t, 'hero.buttons.services', 'Our Services')}
           </ServicesButton>
-          <PrimaryButton to={`/${i18n.language}/projects`}>
-            {translateReact(t, 'hero.buttons.projects', 'Projects')}
-          </PrimaryButton>
           <SecondaryButton to={`/${i18n.language}/contact`}>
             {translateReact(t, 'hero.buttons.contact', 'Contact Us')}
           </SecondaryButton>

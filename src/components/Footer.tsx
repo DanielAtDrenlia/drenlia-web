@@ -220,7 +220,7 @@ const Footer: React.FC = () => {
             {translateReact(t, 'footer.about.title', 'About Us')}
           </FooterTitle>
           <FooterText>
-            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services and projects.')}
+            {translateReact(t, 'footer.about.description', 'We create innovative solutions for modern problems. Explore our services.')}
           </FooterText>
         </FooterSection>
         
@@ -232,11 +232,14 @@ const Footer: React.FC = () => {
             <FooterLink to={`/${i18n.language}`}>
               {translateReact(t, 'nav.home', 'Home')}
             </FooterLink>
-            <FooterLink to={`/${i18n.language}/about`}>
-              {translateReact(t, 'nav.about', 'About')}
-            </FooterLink>
             <FooterLink to={`/${i18n.language}/services`}>
               {translateReact(t, 'nav.services', 'Services')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/projects`}>
+              {translateReact(t, 'nav.projects', 'Projects')}
+            </FooterLink>
+            <FooterLink to={`/${i18n.language}/about`}>
+              {translateReact(t, 'nav.about', 'About')}
             </FooterLink>
             <FooterLink to={`/${i18n.language}/contact`}>
               {translateReact(t, 'nav.contact', 'Contact')}
@@ -271,7 +274,7 @@ const Footer: React.FC = () => {
       </FooterContent>
 
       <Copyright>
-        {translateReact(t, 'footer.copyright', '© {{year}} Drenlia. All rights reserved.', { year: currentYear })}
+        {translateReact(t, 'footer.copyright', '© {{year}}. All rights reserved.', { year: currentYear })}
       </Copyright>
     </FooterContainer>
   );

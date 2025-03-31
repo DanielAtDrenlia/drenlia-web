@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const EmailContainer = styled.span`
@@ -54,10 +54,39 @@ const Tooltip = styled.span<{ visible: boolean }>`
 const ObfuscatedEmail: React.FC = () => {
   const [tooltipText, setTooltipText] = useState("Click to copy email");
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [emailUser, setEmailUser] = useState("info");
+  const [emailDomain, setEmailDomain] = useState("yourcompany.com");
   
-  // Email parts stored separately to avoid easy scraping
-  const emailUser = "info";
-  const emailDomain = "drenlia.com";
+  useEffect(() => {
+    const fetchEmail = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+          // Find the contact_email setting
+          const contactEmailSetting = data.settings.find((setting: any) => setting.key === 'contact_email');
+          const contactEmail = contactEmailSetting ? contactEmailSetting.value : 'info@yourcompany.com';
+          
+          // Split email into parts for obfuscation
+          const [user, domain] = contactEmail.split('@');
+          setEmailUser(user);
+          setEmailDomain(domain);
+        } else {
+          // Use fallback if fetch fails or no settings found
+          setEmailUser('info');
+          setEmailDomain('yourcompany.com');
+        }
+      } catch (error) {
+        console.error('Error fetching email:', error);
+        // Use fallback if fetch fails
+        setEmailUser('info');
+        setEmailDomain('yourcompany.com');
+      }
+    };
+
+    fetchEmail();
+  }, []);
   
   const handleCopyEmail = () => {
     // Assemble the email only when clicked
@@ -103,22 +132,13 @@ const ObfuscatedEmail: React.FC = () => {
     >
       <Tooltip visible={tooltipVisible}>{tooltipText}</Tooltip>
       <span style={{ display: 'none' }}>email-protected</span>
-      <EmailPart>i</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>f</EmailPart>
-      <EmailPart>o</EmailPart>
+      {emailUser.split('').map((char, i) => (
+        <EmailPart key={`user-${i}`}>{char}</EmailPart>
+      ))}
       <EmailSymbol>@</EmailSymbol>
-      <EmailPart>d</EmailPart>
-      <EmailPart>r</EmailPart>
-      <EmailPart>e</EmailPart>
-      <EmailPart>n</EmailPart>
-      <EmailPart>l</EmailPart>
-      <EmailPart>i</EmailPart>
-      <EmailPart>a</EmailPart>
-      <EmailPart>.</EmailPart>
-      <EmailPart>c</EmailPart>
-      <EmailPart>o</EmailPart>
-      <EmailPart>m</EmailPart>
+      {emailDomain.split('').map((char, i) => (
+        <EmailPart key={`domain-${i}`}>{char}</EmailPart>
+      ))}
     </EmailContainer>
   );
 };

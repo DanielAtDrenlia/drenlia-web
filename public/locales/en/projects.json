@@ -1,35 +1,22 @@
 {
   "title": "Our Projects",
-  "subtitle": "Explore our portfolio of innovative digital solutions that have helped some of our clients achieve their needs.",
+  "subtitle": "Discover our portfolio of successful digital solutions",
   "filters": {
-    "all": "All Projects",
-    "web": "Web Development",
-    "mobile": "Mobile Apps"
+    "all": "All",
+    "web": "Web",
+    "mobile": "Mobile"
   },
   "status": {
-    "completed": "Completed",
-    "in-progress": "In Progress"
+    "pending-approval": "Pending Approval",
+    "planned": "Planned",
+    "in-progress": "In Progress",
+    "under-review": "Under Review",
+    "testing": "Testing",
+    "completed": "Completed"
   },
   "actions": {
+    "viewOnGitHub": "View on GitHub",
     "viewProject": "View Project",
-    "demo": "Demo"
-  },
-  "projects": {
-    "kanban": {
-      "title": "Kanban App",
-      "description": "A free and open source simple kanban board application for quick task management with drag-and-drop functionality, task assignments, and progress tracking."
-    },
-    "teamScheduler": {
-      "title": "Team Scheduler App",
-      "description": "A free and open source collaborative calendar application that allows teams to schedule work shifts, drag and drop schedules, and more. Effortlessly schedule shifts for your team!"
-    },
-    "secureMail": {
-      "title": "Secure Mail",
-      "description": "An encrypted email platform with advanced security features, ensuring your communications remain private and protected."
-    },
-    "clueCam": {
-      "title": "ClueCam",
-      "description": "A mobile application that uses the camera to locate objects in real-time, perfect for learning and exploring."
-    }
+    "demo": "Live Demo"
   }
 } 

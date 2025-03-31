@@ -15,8 +15,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
 
-    // Get the origin from the request headers
-    const origin = req.get('origin') || 'https://dev.drenlia.com';
+    // Get the origin from the request headers and validate against allowed origins
+    const origin = req.get('origin');
+    const allowedOrigins = process.env.FRONTEND_URL.split(',');
+    
+    if (!origin || !allowedOrigins.includes(origin)) {
+      return res.status(403).json({ error: 'Invalid origin' });
+    }
 
     const response = await axios.post(
       `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_CLOUD_API_KEY}`,

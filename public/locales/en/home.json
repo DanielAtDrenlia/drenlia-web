@@ -1,16 +1,15 @@
 {
   "hero": {
-    "title": "Welcome to Drenlia",
-    "subtitle": "We create innovative solutions for modern problems. Explore our services and projects.",
-    "description": "We specialize in creating cutting-edge web applications, providing expert IT consulting, and delivering comprehensive technology solutions that help your business thrive in the digital age.",
+    "title": "Welcome to My Website",
+    "subtitle": "We take care of you. Explore our services",
+    "description": "We specialize in supporting companies, providing expert consulting, and delivering comprehensive solutions that help your business thrive in the digital age.",
     "buttons": {
       "services": "Services",
-      "projects": "Projects",
       "contact": "Contact Us"
     }
   },
   "cta": {
-    "title": "Ready to Transform Your Digital Presence?",
+    "title": "Let us help you!",
     "description": "Let's discuss how we can help you achieve your goals and take your business to the next level.",
     "button": "Get Started"
   }

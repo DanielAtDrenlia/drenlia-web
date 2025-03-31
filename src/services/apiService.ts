@@ -4,7 +4,7 @@
  */
 
 // API base URL - use relative path for all environments
-const API_BASE_URL = '/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // About section interface
 export interface AboutSection {
@@ -48,6 +48,32 @@ export interface User {
 
 export interface TranslationResponse {
   translation: string;
+}
+
+// Project interface
+export interface Project {
+  project_id: number;
+  title: string;
+  description: string;
+  display_order: number;
+  image_url: string | null;
+  fr_title: string | null;
+  fr_description: string | null;
+  type_id: number;  // Required foreign key to project_types
+  status: string;
+  git_url: string | null;
+  demo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Project Type interface
+export interface ProjectType {
+  type_id: number;
+  type: string;
+  fr_type: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -495,5 +521,309 @@ export const translateText = async (text: string): Promise<string> => {
   } catch (error) {
     console.error('Translation error:', error);
     throw new Error('Failed to translate text');
+  }
+};
+
+/**
+ * Get all projects
+ * @returns Promise with projects array
+ */
+export const getProjects = async (): Promise<Project[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get projects');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting projects:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a new project
+ * @param project The project data
+ * @returns Promise with creation result
+ */
+export const createProject = async (project: Omit<Project, 'project_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; id?: number }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/projects`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(project),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create project');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating project:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Update a project
+ * @param id The project ID
+ * @param project The project data
+ * @returns Promise with update result
+ */
+export const updateProject = async (id: number, project: Partial<Project>): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/projects/${id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(project),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update project');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating project:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Delete a project
+ * @param id The project ID
+ * @returns Promise with deletion result
+ */
+export const deleteProject = async (id: number): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/projects/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete project');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Update project display orders
+ * @param projectOrders Array of project objects with new display orders
+ * @returns Promise with update result
+ */
+export const updateProjectOrders = async (
+  projects: Array<{ project_id: number; display_order: number }>
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/projects/reorder`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ projects }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Server error:', data);
+      return { 
+        success: false, 
+        error: data.message || 'Failed to update project orders'
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating project orders:', error);
+    return { 
+      success: false, 
+      error: 'Failed to connect to server'
+    };
+  }
+};
+
+/**
+ * Upload an image for a project
+ * @param file The image file to upload
+ * @returns Promise with upload result
+ */
+export const uploadProjectImage = async (file: File): Promise<{ success: boolean; imagePath?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/admin/upload/project-image`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading project image:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Update team member display orders
+ * @param members Array of member objects with new display orders
+ * @returns Promise with update result
+ */
+export const updateTeamMemberOrders = async (members: { team_id: number; display_order: number }[]): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/team/reorder`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ members }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Server error:', errorData);
+      throw new Error('Failed to update team member orders');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating team member orders:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Get all project types
+ * @returns Promise with project types array
+ */
+export const getProjectTypes = async (): Promise<ProjectType[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/project-types`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get project types');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting project types:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a new project type
+ * @param projectType The project type data
+ * @returns Promise with creation result
+ */
+export const createProjectType = async (projectType: Omit<ProjectType, 'type_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; id?: number }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectType),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating project type:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Update a project type
+ * @param id The project type ID
+ * @param projectType The project type data
+ * @returns Promise with update result
+ */
+export const updateProjectType = async (id: number, projectType: Partial<ProjectType>): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types/${id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectType),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating project type:', error);
+    return { success: false };
+  }
+};
+
+/**
+ * Delete a project type
+ * @param id The project type ID
+ * @returns Promise with deletion result
+ */
+export const deleteProjectType = async (id: number): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/project-types/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete project type');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting project type:', error);
+    return { success: false };
   }
 }; 

@@ -27,7 +27,8 @@
       "error": "Désolé, une erreur s'est produite. Veuillez réessayer."
     },
     "service": {
-      "available": "Le service d'email est disponible"
+      "available": "Le service d'email est disponible",
+      "not_configured": "Le service d'email n'est pas configuré"
     },
     "error": {
       "name": "Veuillez entrer votre nom",
@@ -41,7 +42,7 @@
   },
   "location": {
     "title": "Notre adresse",
-    "address": "7037, rue des Tournesols\nSaint-Hubert, QC\nJ3Y 8S2\nCanada"
+    "address": "1234 Rue de la Paix, Ville de Montréal, QC, H3Z 2Y7, Canada"
   },
   "phone": {
     "title": "Téléphone",
@@ -63,11 +64,10 @@
     "loading": "Chargement du captcha...",
     "valid": "Vérification réussie",
     "invalid": "Code incorrect, veuillez réessayer",
-    "error": "Erreur de chargement du captcha. Veuillez réessayer.",
-    "alt": "Image CAPTCHA",
-    "verifying": "Vérification en cours...",
     "error": {
       "load": "Échec du chargement du captcha"
-    }
+    },
+    "alt": "Image CAPTCHA",
+    "verifying": "Vérification en cours..."
   }
-} 
+}

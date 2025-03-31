@@ -1,2 +1,2 @@
 #!/bin/bash
-cd $HOME/drenlia-web/ && npm run dev
+cd $HOME/projects/drenlia-web/ && npm run dev
