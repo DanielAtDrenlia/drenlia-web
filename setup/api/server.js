@@ -144,10 +144,10 @@ const ensureDbReady = async () => {
               image_url TEXT,
               fr_title TEXT,
               fr_description TEXT,
-              type TEXT NOT NULL,
-              type_fr TEXT,
+              type_id INTEGER NOT NULL,
               git_url TEXT,
-              demo_url TEXT
+              demo_url TEXT,
+              FOREIGN KEY (type_id) REFERENCES project_types(type_id)
             )
           `);
 
