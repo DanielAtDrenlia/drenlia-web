@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import { getProjects } from '../services/apiService';
+import type { Project } from '../services/apiService';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useSettings } from '../services/settingsService';
 
@@ -190,12 +192,25 @@ const NavLinkContent = styled.div`
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const isHomePage = location.pathname === `/${i18n.language}`;
   const { settings } = useSettings();
   const siteName = settings?.find(s => s.key === 'site_name')?.value || 'Company Name';
   const logoPath = settings?.find(s => s.key === 'logo_path')?.value || '/images/logo/logo.png';
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const data = await getProjects();
+        setProjects(data);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   const handleNavigation = (path: string) => {
     setIsOpen(false);
@@ -276,14 +291,16 @@ const Navbar: React.FC = () => {
               </>
             </NavLinkContent>
           </NavLinkButton>
-          <StyledNavLink to={getLangPath('/projects')}>
-            <NavLinkContent>
-              <>
-                {t('nav.projects', { defaultValue: 'Projects' })}
-                <ActiveIndicator isActive={isActive('/projects')} />
-              </>
-            </NavLinkContent>
-          </StyledNavLink>
+          {projects.length > 0 && (
+            <StyledNavLink to={getLangPath('/projects')}>
+              <NavLinkContent>
+                <>
+                  {t('nav.projects', { defaultValue: 'Projects' })}
+                  <ActiveIndicator isActive={isActive('/projects')} />
+                </>
+              </NavLinkContent>
+            </StyledNavLink>
+          )}
           <StyledNavLink to={getLangPath('/about')}>
             <NavLinkContent>
               <>
