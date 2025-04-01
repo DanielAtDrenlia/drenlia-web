@@ -51,7 +51,7 @@ interface SortableItemProps {
   uploadingImage: boolean;
   uploadError: string | null;
   fileInputRef: RefObject<HTMLInputElement>;
-  handleTranslate: (field: 'title' | 'description') => Promise<void>;
+  handleTranslate: (field: 'title' | 'description' | 'fr_title' | 'fr_description') => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -105,7 +105,19 @@ const SortableItem: React.FC<SortableItemProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor={`title-${section.about_id}`} className="block text-sm font-medium text-gray-700">Title (English)</label>
+                <label htmlFor={`title-${section.about_id}`} className="block text-sm font-medium text-gray-700">
+                  Title (English)
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate('title')}
+                    className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                  >
+                    Translate
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </label>
                 <input
                   type="text"
                   name="title"
@@ -120,7 +132,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
                   Title (French)
                   <button
                     type="button"
-                    onClick={() => handleTranslate('title')}
+                    onClick={() => handleTranslate('fr_title')}
                     className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
                   >
                     Translate
@@ -141,19 +153,8 @@ const SortableItem: React.FC<SortableItemProps> = ({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor={`content-${section.about_id}`} className="block text-sm font-medium text-gray-700">Content (English)</label>
-                <textarea
-                  name="description"
-                  id={`content-${section.about_id}`}
-                  rows={6}
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor={`fr_content-${section.about_id}`} className="block text-sm font-medium text-gray-700">
-                  Content (French)
+                <label htmlFor={`description-${section.about_id}`} className="block text-sm font-medium text-gray-700">
+                  Content (English)
                   <button
                     type="button"
                     onClick={() => handleTranslate('description')}
@@ -166,8 +167,31 @@ const SortableItem: React.FC<SortableItemProps> = ({
                   </button>
                 </label>
                 <textarea
+                  name="description"
+                  id={`description-${section.about_id}`}
+                  rows={6}
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor={`fr_description-${section.about_id}`} className="block text-sm font-medium text-gray-700">
+                  Content (French)
+                  <button
+                    type="button"
+                    onClick={() => handleTranslate('fr_description')}
+                    className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                  >
+                    Translate
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </label>
+                <textarea
                   name="fr_description"
-                  id={`fr_content-${section.about_id}`}
+                  id={`fr_description-${section.about_id}`}
                   rows={6}
                   value={formData.fr_description}
                   onChange={handleInputChange}
@@ -634,46 +658,56 @@ const AboutPage: React.FC = () => {
   };
 
   // Handle translation
-  const handleTranslate = async (field: 'title' | 'description') => {
+  const handleTranslate = async (field: 'title' | 'description' | 'fr_title' | 'fr_description') => {
     try {
-      const textToTranslate = field === 'title' ? formData.title : formData.description;
-      if (!textToTranslate) return;
+      const isTargetFrench = field.startsWith('fr_');
+      const baseField = isTargetFrench ? field.replace('fr_', '') : field;
+      const sourceField = (isTargetFrench ? baseField : `fr_${baseField}`) as keyof AboutSectionForm;
+      const targetField = field as keyof AboutSectionForm;
+      const textToTranslate = formData[sourceField];
 
-      if (field === 'title') {
-        // For titles, translate as a single piece
-        const translatedText = await translateText(textToTranslate);
-        if (translatedText) {
-          setFormData(prev => ({
-            ...prev,
-            fr_title: translatedText
-          }));
-        }
-      } else {
-        // For descriptions, preserve paragraphs
-        // Split text into paragraphs (handling both \n and \r\n)
-        const paragraphs = textToTranslate.split(/\r?\n\r?\n/).filter(p => p.trim());
-        
-        // Translate each paragraph separately
-        const translatedParagraphs = await Promise.all(
-          paragraphs.map(async (paragraph) => {
-            const translated = await translateText(paragraph);
-            return translated || paragraph; // fallback to original if translation fails
-          })
-        );
-
-        // Join paragraphs back together with double newlines
-        const translatedText = translatedParagraphs.join('\n\n');
-        
-        if (translatedText) {
-          setFormData(prev => ({
-            ...prev,
-            fr_description: translatedText
-          }));
-        }
+      if (!textToTranslate) {
+        toast.error(`Please enter ${isTargetFrench ? 'English' : 'French'} text first`);
+        return;
       }
-    } catch (err) {
-      console.error('Error translating text:', err);
-      setError('Failed to translate text. Please try again.');
+
+      // Set translating state
+      setFormData(prev => ({
+        ...prev,
+        [targetField]: 'Translating...'
+      }));
+
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToTranslate,
+          sourceLanguage: isTargetFrench ? 'en' : 'fr',
+          targetLanguage: isTargetFrench ? 'fr' : 'en'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation failed');
+      }
+
+      const data = await response.json();
+      
+      setFormData(prev => ({
+        ...prev,
+        [targetField]: data.translation
+      }));
+
+      toast.success('Translation completed');
+    } catch (error) {
+      console.error('Translation error:', error);
+      setFormData(prev => ({
+        ...prev,
+        [field as keyof AboutSectionForm]: ''
+      }));
+      toast.error('Failed to translate text. Please try again.');
     }
   };
 
@@ -815,7 +849,7 @@ const AboutPage: React.FC = () => {
                       Title (French)
                       <button
                         type="button"
-                        onClick={() => handleTranslate('title')}
+                        onClick={() => handleTranslate('fr_title')}
                         className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
                       >
                         Translate
@@ -851,7 +885,7 @@ const AboutPage: React.FC = () => {
                       Content (French)
                       <button
                         type="button"
-                        onClick={() => handleTranslate('description')}
+                        onClick={() => handleTranslate('fr_description')}
                         className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
                       >
                         Translate

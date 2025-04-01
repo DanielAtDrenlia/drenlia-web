@@ -16,6 +16,8 @@ interface FilterButtonProps {
   active: boolean;
 }
 
+type ProjectStatus = keyof typeof import('../../public/locales/en/projects.json')['status'];
+
 const ProjectsContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
@@ -245,13 +247,32 @@ const StatusContainer = styled.div`
   margin-bottom: 0.5rem;
 `;
 
-const StatusDot = styled.span<{ status: 'completed' | 'in-progress' }>`
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'completed':
+      return '#10B981'; // Green
+    case 'in-progress':
+      return '#3B82F6'; // Blue
+    case 'testing':
+      return '#8B5CF6'; // Purple
+    case 'under-review':
+      return '#F59E0B'; // Orange
+    case 'planned':
+      return '#6B7280'; // Gray
+    case 'pending-approval':
+      return '#EF4444'; // Red
+    default:
+      return '#6B7280'; // Default gray for any new status
+  }
+};
+
+const StatusDot = styled.span<{ status: string }>`
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: ${({ status }) => status === 'completed' ? '#4CAF50' : '#FF9800'};
-  margin-right: 6px;
+  margin-right: 8px;
+  background-color: ${({ status }) => getStatusColor(status)};
 `;
 
 const StatusText = styled.span`
@@ -492,10 +513,10 @@ const ProjectsPage: React.FC = () => {
       <ProjectsContainer ref={containerRef}>
         <ProjectsHeader id="projects-header">
           <ProjectsTitle isVisible={isVisible}>
-            {t('title', 'Our Projects')}
+            {t('title', 'Our Projects') as string}
           </ProjectsTitle>
           <ProjectsSubtitle isVisible={isVisible}>
-            {t('subtitle', 'Discover our portfolio of successful digital solutions')}
+            {t('subtitle', 'Discover our portfolio of successful digital solutions') as string}
           </ProjectsSubtitle>
         </ProjectsHeader>
         
@@ -504,7 +525,7 @@ const ProjectsPage: React.FC = () => {
             active={selectedCategory === 'all'}
             onClick={() => handleCategoryChange('all')}
           >
-            {t('filters.all', 'All')}
+            {t('filters.all', 'All') as string}
           </FilterButton>
           {projectTypes.map(type => (
             <FilterButton 
@@ -553,9 +574,9 @@ const ProjectsPage: React.FC = () => {
                   <ProjectCategory>{getLocalizedType(project.type_id)}</ProjectCategory>
                   <ProjectTitle>{getLocalizedContent(project, 'title')}</ProjectTitle>
                   <StatusContainer>
-                    <StatusDot status="completed" />
+                    <StatusDot status={project.status} />
                     <StatusText>
-                      {t('status.completed', 'Completed')}
+                      {t(`status.${project.status}`, project.status) as string}
                     </StatusText>
                   </StatusContainer>
                   <ProjectDescription>{getLocalizedContent(project, 'description')}</ProjectDescription>
@@ -565,12 +586,12 @@ const ProjectsPage: React.FC = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                         </svg>
-                        <span>{t('actions.viewOnGitHub', 'View on GitHub')}</span>
+                        <span>{t('actions.viewOnGitHub', 'View on GitHub') as string}</span>
                       </GitHubLink>
                     )}
                     {project.demo_url && (
                       <DemoButton href={project.demo_url} target="_blank" rel="noopener noreferrer">
-                        {t('actions.demo', 'Live Demo')}
+                        {t('actions.demo', 'Live Demo') as string}
                       </DemoButton>
                     )}
                   </ProjectLinks>

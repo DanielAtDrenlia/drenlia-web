@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Modal from '../../components/Modal';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
+import { toast } from 'react-toastify';
 
 // Form data interface for team member
 interface TeamMemberForm {
@@ -570,20 +571,56 @@ const TeamPage: React.FC = () => {
   };
 
   // Handle translation
-  const handleTranslate = async (field: 'title' | 'bio') => {
+  const handleTranslate = async (field: 'title' | 'bio' | 'fr_title' | 'fr_bio') => {
     try {
-      const textToTranslate = field === 'title' ? formData.title : formData.bio;
-      if (!textToTranslate) return;
+      const isTargetFrench = field.startsWith('fr_');
+      const baseField = isTargetFrench ? field.replace('fr_', '') : field;
+      const sourceField = (isTargetFrench ? baseField : `fr_${baseField}`) as keyof TeamMemberForm;
+      const targetField = field as keyof TeamMemberForm;
+      const textToTranslate = formData[sourceField];
 
-      setTranslationError(null); // Clear any previous translation error
-      const translatedText = await translateText(textToTranslate);
+      if (!textToTranslate) {
+        toast.error(`Please enter ${isTargetFrench ? 'English' : 'French'} text first`);
+        return;
+      }
+
+      // Set translating state
       setFormData(prev => ({
         ...prev,
-        [field === 'title' ? 'fr_title' : 'fr_bio']: translatedText,
+        [targetField]: 'Translating...'
       }));
+
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToTranslate,
+          sourceLanguage: isTargetFrench ? 'en' : 'fr',
+          targetLanguage: isTargetFrench ? 'fr' : 'en'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation failed');
+      }
+
+      const data = await response.json();
+      
+      setFormData(prev => ({
+        ...prev,
+        [targetField]: data.translation
+      }));
+
+      toast.success('Translation completed');
     } catch (error) {
       console.error('Translation error:', error);
-      setTranslationError('Translation failed: Communication with Google Cloud API failed. Please check your API key configuration.');
+      setFormData(prev => ({
+        ...prev,
+        [field as keyof TeamMemberForm]: ''
+      }));
+      toast.error('Failed to translate text. Please try again.');
     }
   };
 
@@ -813,7 +850,19 @@ const TeamPage: React.FC = () => {
               {/* Job Titles */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">Job Title (English)</label>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                    Job Title (English)
+                    <button
+                      type="button"
+                      onClick={() => handleTranslate('title')}
+                      className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                    >
+                      Translate
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </label>
                   <input
                     type="text"
                     id="title"
@@ -828,38 +877,46 @@ const TeamPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="fr_title" className="block text-sm font-medium text-gray-700">Job Title (French)</label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="fr_title"
-                        name="fr_title"
-                        value={formData.fr_title}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      />
-                      <TranslateButton
-                        type="button"
-                        onClick={() => handleTranslate('title')}
-                        className="mt-1"
-                      >
-                        Translate
-                      </TranslateButton>
-                    </div>
-                    {translationError && (
-                      <div className="text-sm text-red-600 mt-1">
-                        {translationError}
-                      </div>
-                    )}
-                  </div>
+                  <label htmlFor="fr_title" className="block text-sm font-medium text-gray-700">
+                    Job Title (French)
+                    <button
+                      type="button"
+                      onClick={() => handleTranslate('fr_title')}
+                      className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                    >
+                      Translate
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </label>
+                  <input
+                    type="text"
+                    id="fr_title"
+                    name="fr_title"
+                    value={formData.fr_title}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
                 </div>
               </div>
 
               {/* Bios */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio (English)</label>
+                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
+                    Bio (English)
+                    <button
+                      type="button"
+                      onClick={() => handleTranslate('bio')}
+                      className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                    >
+                      Translate
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </label>
                   <textarea
                     id="bio"
                     name="bio"
@@ -873,31 +930,27 @@ const TeamPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="fr_bio" className="block text-sm font-medium text-gray-700">Bio (French)</label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <textarea
-                        id="fr_bio"
-                        name="fr_bio"
-                        rows={4}
-                        value={formData.fr_bio}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      />
-                      <TranslateButton
-                        type="button"
-                        onClick={() => handleTranslate('bio')}
-                        className="mt-1"
-                      >
-                        Translate
-                      </TranslateButton>
-                    </div>
-                    {translationError && (
-                      <div className="text-sm text-red-600 mt-1">
-                        {translationError}
-                      </div>
-                    )}
-                  </div>
+                  <label htmlFor="fr_bio" className="block text-sm font-medium text-gray-700">
+                    Bio (French)
+                    <button
+                      type="button"
+                      onClick={() => handleTranslate('fr_bio')}
+                      className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                    >
+                      Translate
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </label>
+                  <textarea
+                    id="fr_bio"
+                    name="fr_bio"
+                    rows={4}
+                    value={formData.fr_bio}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
                 </div>
               </div>
 

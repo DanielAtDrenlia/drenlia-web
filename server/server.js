@@ -106,6 +106,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Create email transporter
+console.log('Email configuration:', {
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  user: process.env.EMAIL_USER,
+  pass_length: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 0,
+  pass_contains_spaces: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.includes(' ') : false
+});
+
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,

@@ -1,15 +1,15 @@
 {
   "hero": {
     "title": "Welcome to My Website",
-    "subtitle": "We take care of you. Explore our services",
-    "description": "We specialize in supporting companies, providing expert consulting, and delivering comprehensive solutions that help your business thrive in the digital age.",
+    "subtitle": "We create innovative solutions to modern problems. Discover our services.",
+    "description": "We specialize in building cutting-edge web applications, providing expert IT consulting, and delivering comprehensive technology solutions that help your business thrive in the digital age.",
     "buttons": {
       "services": "Services",
-      "contact": "Contact Us"
+      "contact": "Contact us"
     }
   },
   "cta": {
-    "title": "Let us help you!",
+    "title": "Ready to transform your digital presence?",
     "description": "Let's discuss how we can help you achieve your goals and take your business to the next level.",
     "button": "Get Started"
   }

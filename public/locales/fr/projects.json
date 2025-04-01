@@ -1,11 +1,6 @@
 {
   "title": "Nos Projets",
   "subtitle": "Découvrez notre portfolio de solutions numériques réussies",
-  "filters": {
-    "all": "Tous",
-    "web": "Web",
-    "mobile": "Mobile"
-  },
   "status": {
     "pending-approval": "En attente d'approbation",
     "planned": "Planifié",

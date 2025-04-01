@@ -28,6 +28,7 @@ interface ProjectFormData {
   status: string;
   git_url: string | null;
   demo_url: string | null;
+  [key: string]: string | number | null;
 }
 
 type ProjectTypeFormData = Omit<ProjectType, 'type_id' | 'created_at' | 'updated_at'>;
@@ -55,6 +56,7 @@ interface SortableProjectItemProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string | null } }) => void;
   projectTypes: ProjectType[];
   translateStatus: (t: TFunction, key: string, defaultValue: string) => string;
+  handleTranslate: (field: 'title' | 'description' | 'fr_title' | 'fr_description') => Promise<void>;
 }
 
 interface ApiError {
@@ -427,6 +429,62 @@ const ProjectsPage: React.FC = () => {
     return t(key as any, defaultValue);
   };
 
+  const handleTranslate = async (field: 'title' | 'description' | 'fr_title' | 'fr_description') => {
+    try {
+      const isFromFrench = field.startsWith('fr_');
+      const sourceField = isFromFrench ? field : `fr_${field}` as keyof ProjectFormData;
+      const targetField = isFromFrench ? field.replace('fr_', '') as keyof ProjectFormData : `fr_${field}` as keyof ProjectFormData;
+      const textToTranslate = formData[isFromFrench ? sourceField : field];
+
+      if (!textToTranslate) {
+        toast.error(`Please enter ${isFromFrench ? 'French' : 'English'} text first`);
+        return;
+      }
+
+      // Set translating state
+      setFormData(prev => ({
+        ...prev,
+        [isFromFrench ? targetField : sourceField]: 'Translating...'
+      }));
+
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToTranslate,
+          sourceLanguage: isFromFrench ? 'fr' : 'en',
+          targetLanguage: isFromFrench ? 'en' : 'fr'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation failed');
+      }
+
+      const data = await response.json();
+      
+      setFormData(prev => ({
+        ...prev,
+        [isFromFrench ? targetField : sourceField]: data.translation
+      }));
+
+      toast.success('Translation completed');
+    } catch (error) {
+      console.error('Translation error:', error);
+      const isFromFrench = field.startsWith('fr_');
+      const sourceField = isFromFrench ? field : `fr_${field}` as keyof ProjectFormData;
+      const targetField = isFromFrench ? field.replace('fr_', '') as keyof ProjectFormData : `fr_${field}` as keyof ProjectFormData;
+      
+      setFormData(prev => ({
+        ...prev,
+        [isFromFrench ? targetField : sourceField]: ''
+      }));
+      toast.error('Failed to translate text. Please try again.');
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
@@ -551,6 +609,7 @@ const ProjectsPage: React.FC = () => {
                 onInputChange={handleInputChange}
                 projectTypes={projectTypes}
                 translateStatus={translateStatus}
+                handleTranslate={handleTranslate}
               />
             ))}
           </div>
@@ -665,7 +724,8 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   formData,
   onInputChange,
   projectTypes,
-  translateStatus
+  translateStatus,
+  handleTranslate
 }) => {
   const { t } = useTranslation();
   const {
@@ -725,7 +785,19 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor={`title-${project.project_id}`} className="block text-sm font-medium text-gray-700">Title (English)</label>
+              <div className="flex justify-between items-center">
+                <label htmlFor={`title-${project.project_id}`} className="block text-sm font-medium text-gray-700">Title (English)</label>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate('fr_title')}
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                >
+                  Translate
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
               <input
                 type="text"
                 id={`title-${project.project_id}`}
@@ -740,7 +812,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 <label htmlFor={`fr_title-${project.project_id}`} className="block text-sm font-medium text-gray-700">Title (French)</label>
                 <button
                   type="button"
-                  onClick={() => onInputChange({ target: { name: 'fr_title', value: 'Translating...' } })}
+                  onClick={() => handleTranslate('title')}
                   className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
                 >
                   Translate
@@ -762,7 +834,19 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor={`description-${project.project_id}`} className="block text-sm font-medium text-gray-700">Description (English)</label>
+              <div className="flex justify-between items-center">
+                <label htmlFor={`description-${project.project_id}`} className="block text-sm font-medium text-gray-700">Description (English)</label>
+                <button
+                  type="button"
+                  onClick={() => handleTranslate('fr_description')}
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                >
+                  Translate
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389 21.034 21.034 0 01-.554-.6 19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
               <textarea
                 id={`description-${project.project_id}`}
                 name="description"
@@ -777,7 +861,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 <label htmlFor={`fr_description-${project.project_id}`} className="block text-sm font-medium text-gray-700">Description (French)</label>
                 <button
                   type="button"
-                  onClick={() => onInputChange({ target: { name: 'fr_description', value: 'Translating...' } })}
+                  onClick={() => handleTranslate('description')}
                   className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
                 >
                   Translate
@@ -938,12 +1022,22 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
           <div>
             <h3 className="text-lg font-medium text-gray-900">{project.title}</h3>
             <p className="mt-2 text-gray-600">{project.description}</p>
-            <p className="mt-2 text-sm text-gray-500">Type: {projectTypes.find(pt => pt.type_id === project.type_id)?.type}</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Type: {(() => {
+                const foundType = projectTypes.find(pt => Number(pt.type_id) === Number(project.type_id));
+                return foundType?.type || 'No type assigned';
+              })()}
+            </p>
           </div>
           <div>
             <h3 className="text-lg font-medium text-gray-900">{project.fr_title || project.title}</h3>
             <p className="mt-2 text-gray-600">{project.fr_description || project.description}</p>
-            <p className="mt-2 text-sm text-gray-500">Type: {projectTypes.find(pt => pt.type_id === project.type_id)?.fr_type || projectTypes.find(pt => pt.type_id === project.type_id)?.type}</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Type: {(() => {
+                const foundType = projectTypes.find(pt => Number(pt.type_id) === Number(project.type_id));
+                return foundType?.fr_type || foundType?.type || 'No type assigned';
+              })()}
+            </p>
           </div>
           {project.image_url && (
             <div className="col-span-2 mt-4">

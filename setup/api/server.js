@@ -226,13 +226,8 @@ const ensureDbReady = async () => {
 
           // Insert default project types
           const projectTypesData = [
-            { type: 'Web Development', fr_type: 'Développement Web' },
+            { type: 'Web App', fr_type: 'Application Web' },
             { type: 'Mobile App', fr_type: 'Application Mobile' },
-            { type: 'Desktop App', fr_type: 'Application Desktop' },
-            { type: 'API Development', fr_type: 'Développement API' },
-            { type: 'UI/UX Design', fr_type: 'Design UI/UX' },
-            { type: 'Database Design', fr_type: 'Conception de Base de Données' },
-            { type: 'Cloud Solutions', fr_type: 'Solutions Cloud' },
             { type: 'DevOps', fr_type: 'DevOps' }
           ];
 

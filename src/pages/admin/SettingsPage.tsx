@@ -55,13 +55,24 @@ const SettingsPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [newSetting, setNewSetting] = useState({ key: '', value: '' });
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [activeTab, setActiveTab] = useState<'visual' | 'general' | 'translations'>('visual');
+  const [activeTab, setActiveTab] = useState<'visual' | 'general' | 'translations'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    return (tab === 'visual' || tab === 'general' || tab === 'translations') ? tab : 'visual';
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentVideoPath, setCurrentVideoPath] = useState<string | null>(null);
   const [videoVersion, setVideoVersion] = useState<string | null>(null);
 
   const isAdmin = user?.isAdmin || false;
+
+  // Update URL when tab changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', activeTab);
+    window.history.replaceState({}, '', url.toString());
+  }, [activeTab]);
 
   // Check for existing video file on mount
   useEffect(() => {

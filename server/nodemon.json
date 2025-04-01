@@ -1,0 +1,13 @@
+{
+  "watch": ["*.js", "routes/*.js", "services/*.js", "utils/*.js", ".env"],
+  "ext": "js,json,env",
+  "ignore": ["*.test.js", "node_modules/*"],
+  "exec": "node server.js",
+  "verbose": true,
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "legacy-watch": true,
+  "usePolling": true,
+  "watch": [".env", "server.js", "routes/", "services/", "utils/"]
+} 

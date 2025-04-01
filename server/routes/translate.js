@@ -9,7 +9,7 @@ const he = require('he'); // HTML entity decoder
  */
 router.post('/', async (req, res) => {
   try {
-    const { text, targetLanguage = 'fr' } = req.body;
+    const { text, targetLanguage = 'fr', sourceLanguage = 'en' } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -28,7 +28,7 @@ router.post('/', async (req, res) => {
       {
         q: text,
         target: targetLanguage,
-        source: 'en'
+        source: sourceLanguage
       },
       {
         headers: {

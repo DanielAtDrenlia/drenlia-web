@@ -1,11 +1,6 @@
 {
   "title": "Our Projects",
   "subtitle": "Discover our portfolio of successful digital solutions",
-  "filters": {
-    "all": "All",
-    "web": "Web",
-    "mobile": "Mobile"
-  },
   "status": {
     "pending-approval": "Pending Approval",
     "planned": "Planned",

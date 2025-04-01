@@ -215,13 +215,11 @@ const UsersPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="mt-1 text-gray-600">
-            Manage user accounts and admin permissions
-          </p>
+          <p className="mt-1 text-gray-600">Manage user accounts and permissions</p>
         </div>
         <button
           onClick={handleAddUser}
@@ -229,6 +227,14 @@ const UsersPage: React.FC = () => {
         >
           Add User
         </button>
+      </div>
+
+      <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+        <p className="text-sm text-blue-700">
+          When adding a new member with a user role, they will be able to log in to their account and update their member profile, 
+          including their title, bio, and profile picture. Regular users can only manage their own profile information, while administrators 
+          have full access to manage all content, users, and site settings.
+        </p>
       </div>
 
       {loading ? (
