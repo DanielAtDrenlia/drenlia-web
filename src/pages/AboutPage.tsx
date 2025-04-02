@@ -193,18 +193,17 @@ const fadeInRight = keyframes`
   }
 `;
 
-const SectionText = styled.div<{ isVisible: boolean; delay?: number; isEven: boolean }>`
+const SectionText = styled.div<{ isVisible: boolean; isEven: boolean }>`
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-color);
   opacity: 0;
+  transform: translateX(${props => props.isEven ? '50px' : '-50px'});
+  white-space: pre-wrap;
   
-  ${({ isVisible, delay = 0, isEven }) => isVisible && css`
-    animation: ${isEven ? fadeInRight : fadeInLeft} 1s ease forwards;
-    animation-delay: ${0.4 + delay}s;
+  ${({ isVisible, isEven }) => isVisible && css`
+    animation: ${props => props.isEven ? fadeInRight : fadeInLeft} 0.8s ease forwards;
   `}
-  
-  p {
-    margin-bottom: 1.5rem;
-    line-height: 1.8;
-  }
 `;
 
 const SectionImage = styled.div<{ isVisible: boolean; delay?: number; isEven: boolean }>`
