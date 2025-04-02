@@ -6,7 +6,6 @@ import type { TFunction } from 'i18next';
 const FeatureIcon = styled.img`
   width: 50px;
   height: 50px;
-  color: ${props => props.theme.colors.primary};
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.5s ease;
