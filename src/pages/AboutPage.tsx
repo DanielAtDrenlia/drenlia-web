@@ -651,27 +651,29 @@ const AboutPage: React.FC = () => {
       })}
 
       {/* Team Section */}
-      <TeamSection
-        ref={(el: HTMLDivElement | null) => {
-          sectionRefs.current['team'] = el;
-          if (el) el.id = 'team';
-        }}
-        isVisible={visibleSections.team}
-      >
-        <SectionTitle isVisible={visibleSections.team}>
-          {translateReact(t, 'team.title', 'Our Team')}
-        </SectionTitle>
-        <TeamGrid>
-          {teamMembers.map((member, index) => (
-            <TeamMemberComponent
-              key={member.member_id}
-              member={member}
-              isVisible={visibleSections.team}
-              index={index}
-            />
-          ))}
-        </TeamGrid>
-      </TeamSection>
+      {teamMembers.length > 0 && (
+        <TeamSection
+          ref={(el: HTMLDivElement | null) => {
+            sectionRefs.current['team'] = el;
+            if (el) el.id = 'team';
+          }}
+          isVisible={visibleSections.team}
+        >
+          <SectionTitle isVisible={visibleSections.team}>
+            {translateReact(t, 'team.title', 'Our Team')}
+          </SectionTitle>
+          <TeamGrid>
+            {teamMembers.map((member, index) => (
+              <TeamMemberComponent
+                key={member.member_id}
+                member={member}
+                isVisible={visibleSections.team}
+                index={index}
+              />
+            ))}
+          </TeamGrid>
+        </TeamSection>
+      )}
     </AboutContainer>
   );
 };
