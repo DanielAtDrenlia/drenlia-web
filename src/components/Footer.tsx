@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
@@ -214,6 +214,7 @@ const Footer: React.FC = () => {
   const { t, i18n } = useTranslation('common');
   const currentYear = new Date().getFullYear();
   const [projects, setProjects] = useState<Project[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -226,6 +227,25 @@ const Footer: React.FC = () => {
     };
     fetchProjects();
   }, []);
+
+  const handleServicesClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (window.location.pathname === `/${i18n.language}`) {
+      const servicesSection = document.getElementById('services-section');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate(`/${i18n.language}`);
+      // Wait for navigation to complete before scrolling
+      setTimeout(() => {
+        const servicesSection = document.getElementById('services-section');
+        if (servicesSection) {
+          servicesSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
 
   return (
     <FooterContainer>
@@ -247,7 +267,7 @@ const Footer: React.FC = () => {
             <FooterLink to={`/${i18n.language}`}>
               {translateReact(t, 'nav.home', 'Home')}
             </FooterLink>
-            <FooterLink to={`/${i18n.language}/services`}>
+            <FooterLink to="#" onClick={handleServicesClick}>
               {translateReact(t, 'nav.services', 'Services')}
             </FooterLink>
             {projects.length > 0 && (
