@@ -92,26 +92,64 @@ const ObfuscatedEmail: React.FC = () => {
     // Assemble the email only when clicked
     const email = `${emailUser}@${emailDomain}`;
     
-    // Use the clipboard API to copy the email
-    navigator.clipboard.writeText(email)
-      .then(() => {
-        setTooltipText("Email copied!");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      })
-      .catch(() => {
-        setTooltipText("Failed to copy");
-        setTooltipVisible(true);
-        
-        // Hide the tooltip after 2 seconds
-        setTimeout(() => {
-          setTooltipVisible(false);
-        }, 2000);
-      });
+    // Check if clipboard API is available
+    if (navigator.clipboard && window.isSecureContext) {
+      // Use the clipboard API
+      navigator.clipboard.writeText(email)
+        .then(() => {
+          setTooltipText("Email copied!");
+          setTooltipVisible(true);
+          
+          // Hide the tooltip after 2 seconds
+          setTimeout(() => {
+            setTooltipVisible(false);
+          }, 2000);
+        })
+        .catch(() => {
+          // Fallback to manual copy if clipboard API fails
+          fallbackCopyToClipboard(email);
+        });
+    } else {
+      // Fallback to manual copy if clipboard API is not available
+      fallbackCopyToClipboard(email);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text: string) => {
+    // Create a temporary textarea element
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    
+    // Make it invisible
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    
+    // Add it to the document
+    document.body.appendChild(textArea);
+    
+    // Select and copy the text
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      // Try to copy using document.execCommand
+      document.execCommand('copy');
+      setTooltipText("Email copied!");
+      setTooltipVisible(true);
+    } catch (err) {
+      // If execCommand fails, show a message to manually copy
+      setTooltipText("Please copy manually");
+      setTooltipVisible(true);
+    }
+    
+    // Remove the temporary textarea
+    document.body.removeChild(textArea);
+    
+    // Hide the tooltip after 2 seconds
+    setTimeout(() => {
+      setTooltipVisible(false);
+    }, 2000);
   };
   
   const handleMouseEnter = () => {
