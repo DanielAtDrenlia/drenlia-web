@@ -3,6 +3,20 @@ import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
+const FeatureIcon = styled.img`
+  width: 50px;
+  height: 50px;
+  color: ${props => props.theme.colors.primary};
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s ease;
+
+  ${props => props.isVisible && `
+    opacity: 1;
+    transform: translateY(0);
+  `}
+`;
+
 const FeaturesContainer = styled.section`
   padding: 5rem 0;
   background-color: var(--background-color);
@@ -116,20 +130,6 @@ const pulse = keyframes`
   100% {
     transform: scale(1);
   }
-`;
-
-const FeatureIcon = styled.img`
-  width: 50px;
-  height: 50px;
-  color: ${props => props.theme.colors.primary};
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.5s ease;
-
-  ${props => props.isVisible && `
-    opacity: 1;
-    transform: translateY(0);
-  `}
 `;
 
 const fadeIn = keyframes`
