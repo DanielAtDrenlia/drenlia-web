@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
 import ObfuscatedEmail from './ObfuscatedEmail';
+import { getProjects } from '../services/apiService';
+import type { Project } from '../services/apiService';
 
 const FooterContainer = styled.footer`
   background-color: var(--primary-color);
@@ -211,6 +213,19 @@ const translateReact = (t: TFunction<'common', undefined>, key: string, defaultV
 const Footer: React.FC = () => {
   const { t, i18n } = useTranslation('common');
   const currentYear = new Date().getFullYear();
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const data = await getProjects();
+        setProjects(data);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   return (
     <FooterContainer>
@@ -235,9 +250,11 @@ const Footer: React.FC = () => {
             <FooterLink to={`/${i18n.language}/services`}>
               {translateReact(t, 'nav.services', 'Services')}
             </FooterLink>
-            <FooterLink to={`/${i18n.language}/projects`}>
-              {translateReact(t, 'nav.projects', 'Projects')}
-            </FooterLink>
+            {projects.length > 0 && (
+              <FooterLink to={`/${i18n.language}/projects`}>
+                {translateReact(t, 'nav.projects', 'Projects')}
+              </FooterLink>
+            )}
             <FooterLink to={`/${i18n.language}/about`}>
               {translateReact(t, 'nav.about', 'About')}
             </FooterLink>
