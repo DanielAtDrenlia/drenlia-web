@@ -3,16 +3,20 @@ import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-const FeatureIcon = styled.img`
-  width: 50px;
-  height: 50px;
+const FeatureIcon = styled.div<{ isVisible: boolean; index: number }>`
+  margin-bottom: 1.5rem;
   opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.5s ease;
-
-  ${props => props.isVisible && `
+  
+  svg {
+    width: 50px;
+    height: 50px;
+    color: var(--accent-color);
+  }
+  
+  ${({ isVisible, index }) => isVisible && `
+    animation: ${pulse} 0.5s ease-out forwards;
+    animation-delay: ${1.2 + 0.2 * index}s;
     opacity: 1;
-    transform: translateY(0);
   `}
 `;
 
@@ -174,6 +178,60 @@ const translateReact = (t: TFunction<'services', undefined>, key: string, defaul
   return t(key, defaultValue);
 };
 
+const DevServicesIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <polyline points="16 18 22 12 16 6"></polyline>
+    <polyline points="8 6 2 12 8 18"></polyline>
+    <line x1="12" y1="2" x2="12" y2="22"></line>
+  </svg>
+);
+
+const ConsultingIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+  </svg>
+);
+
+const MigrationIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M12 19V5"></path>
+    <path d="M5 12l7-7 7 7"></path>
+    <path d="M5 19h14"></path>
+  </svg>
+);
+
+const MonitoringIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+    <line x1="8" y1="21" x2="16" y2="21"></line>
+    <line x1="12" y1="17" x2="12" y2="21"></line>
+    <polyline points="7 8 12 13 17 8"></polyline>
+  </svg>
+);
+
+const DevOpsIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+);
+
+const LinuxIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24">
+    <g fill="currentColor" stroke="currentColor">
+      <ellipse cx="12" cy="14" rx="6" ry="8" opacity="0.9" />
+      <ellipse cx="12" cy="8" rx="5" ry="5" opacity="0.9" />
+      <ellipse cx="12" cy="14" rx="3.5" ry="6" fill="white" stroke="none" />
+      <ellipse cx="12" cy="9" rx="3" ry="3" fill="white" stroke="none" />
+      <circle cx="10.5" cy="7" r="0.8" fill="currentColor" stroke="none" />
+      <circle cx="13.5" cy="7" r="0.8" fill="currentColor" stroke="none" />
+      <path d="M11.5 9L12 10L12.5 9" strokeWidth="1" />
+      <path d="M9 21L8 22M15 21L16 22" strokeWidth="1.5" />
+      <path d="M6 12C5 13 5 16 6 18M18 12C19 13 19 16 18 18" strokeWidth="1.5" />
+    </g>
+  </svg>
+);
+
 const Features: React.FC = () => {
   const { t } = useTranslation('services');
   const [isVisible, setIsVisible] = useState(false);
@@ -230,34 +288,34 @@ const Features: React.FC = () => {
   
   const services = [
     {
-      icon: '/images/icons/dev-services.svg',
-      title: t('services.development.title'),
-      description: t('services.development.description')
+      icon: <DevServicesIcon />,
+      title: t('categories.service1.title'),
+      description: t('categories.service1.description')
     },
     {
-      icon: '/images/icons/consulting.svg',
-      title: t('services.consulting.title'),
-      description: t('services.consulting.description')
+      icon: <ConsultingIcon />,
+      title: t('categories.service2.title'),
+      description: t('categories.service2.description')
     },
     {
-      icon: '/images/icons/migration.svg',
-      title: t('services.migration.title'),
-      description: t('services.migration.description')
+      icon: <MigrationIcon />,
+      title: t('categories.service3.title'),
+      description: t('categories.service3.description')
     },
     {
-      icon: '/images/icons/monitoring.svg',
-      title: t('services.monitoring.title'),
-      description: t('services.monitoring.description')
+      icon: <MonitoringIcon />,
+      title: t('categories.service4.title'),
+      description: t('categories.service4.description')
     },
     {
-      icon: '/images/icons/devops.svg',
-      title: t('services.devops.title'),
-      description: t('services.devops.description')
+      icon: <DevOpsIcon />,
+      title: t('categories.service5.title'),
+      description: t('categories.service5.description')
     },
     {
-      icon: '/images/icons/linux.svg',
-      title: t('services.linux.title'),
-      description: t('services.linux.description')
+      icon: <LinuxIcon />,
+      title: t('categories.service6.title'),
+      description: t('categories.service6.description')
     }
   ];
   
@@ -278,7 +336,9 @@ const Features: React.FC = () => {
               y={position.y}
               rotate={position.rotate}
             >
-              <FeatureIcon isVisible={isVisible} src={service.icon} />
+              <FeatureIcon isVisible={isVisible} index={index}>
+                {service.icon}
+              </FeatureIcon>
               <FeatureTitle isVisible={isVisible} index={index}>
                 {service.title}
               </FeatureTitle>
