@@ -8,24 +8,37 @@ interface TranslationFieldProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   id?: string;
+  isLongText?: boolean;
 }
 
-const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onChange, disabled, id }) => (
-  <div className="mb-4" id={id}>
-    <label className="block text-sm font-medium text-gray-400 mb-1">
-      {label}
-    </label>
-    <div className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      />
+const TranslationField: React.FC<TranslationFieldProps> = ({ label, value, onChange, disabled, id, isLongText }) => {
+  return (
+    <div className="mb-4" id={id}>
+      <label className="block text-sm font-medium text-gray-400 mb-1">
+        {label}
+      </label>
+      <div className="relative">
+        {isLongText ? (
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            rows={3}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed resize-y"
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+          />
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface TranslationCardProps {
   pair: TranslationPair;
@@ -172,6 +185,16 @@ const TranslationCard: React.FC<TranslationCardProps> = ({
         );
       }
 
+      // Get the corresponding value from the other language
+      const otherLocale = locale === 'en' ? 'fr' : 'en';
+      let otherValue = editedContent[otherLocale];
+      for (const pathKey of currentPath) {
+        otherValue = otherValue?.[pathKey];
+      }
+
+      // Use textarea if either language's text is long
+      const isLongText = (value as string).length > 100 || (typeof otherValue === 'string' && otherValue.length > 100);
+
       return (
         <TranslationField
           key={key}
@@ -191,6 +214,7 @@ const TranslationCard: React.FC<TranslationCardProps> = ({
               return newContent;
             });
           }}
+          isLongText={isLongText}
         />
       );
     });
